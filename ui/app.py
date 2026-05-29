@@ -341,6 +341,23 @@ def generate_pdf_report_bytes(scan_result: dict[str, Any]) -> bytes:
         return Path(generated).read_bytes()
 
 
+def scan_history_to_table_rows(items: list[dict[str, Any]]) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            {
+                "scan_id": item.get("scan_id", ""),
+                "target": item.get("target", ""),
+                "scan_mode": item.get("scan_mode", ""),
+                "status": item.get("status", ""),
+                "created_at": item.get("created_at", ""),
+            }
+        )
+    return rows
+
+
 def render_report_export(st: object) -> None:
     section(st, "Report Export")
     scan_result = st.session_state.get("last_scan_result")
@@ -365,6 +382,33 @@ def render_report_export(st: object) -> None:
         mime="application/pdf",
         width="stretch",
     )
+
+
+def render_scan_history(st: object) -> None:
+    section(st, "Scan History")
+    try:
+        from storage.repositories import ScanResultRepository
+
+        repository = ScanResultRepository()
+        items = repository.list_scan_results(limit=20)
+    except Exception as exc:
+        st.warning(f"Scan history unavailable: {exc}")
+        return
+
+    rows = scan_history_to_table_rows(items)
+    render_safe_table(st, rows, empty="No scan history recorded.")
+    scan_ids = [str(item.get("scan_id")) for item in items if item.get("scan_id")]
+    if not scan_ids:
+        return
+    selected_scan_id = st.selectbox("Load scan result", scan_ids, key="history_scan_id")
+    if st.button("Load Selected Scan", width="stretch"):
+        loaded = repository.get_scan_result(selected_scan_id)
+        if loaded:
+            st.session_state["last_scan_result"] = loaded
+            st.session_state["dummy_pipeline_result"] = loaded
+            st.success(f"Loaded scan result: {selected_scan_id}")
+        else:
+            st.warning("Selected scan result was not found.")
 
 
 def _render_dummy_pipeline_result(st: object, result: dict[str, Any]) -> None:
@@ -451,6 +495,12 @@ def render_dummy_scan_panel(st: object) -> None:
                 )
                 st.session_state["dummy_pipeline_result"] = result
                 st.session_state["last_scan_result"] = result
+                try:
+                    from storage.repositories import ScanResultRepository
+
+                    ScanResultRepository().save_scan_result(result)
+                except Exception as storage_exc:
+                    st.warning(f"Scan completed but could not be saved to history: {storage_exc}")
             except Exception as exc:
                 result = {
                     "status": "error",
@@ -473,6 +523,7 @@ def render_dummy_scan_panel(st: object) -> None:
     if isinstance(result, dict):
         _render_dummy_pipeline_result(st, result)
     render_report_export(st)
+    render_scan_history(st)
 
 
 def render_safe_table(st: object, data: object, empty: str = "Belum ada data.") -> int:

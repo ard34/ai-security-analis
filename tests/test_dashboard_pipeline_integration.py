@@ -4,7 +4,7 @@ import importlib
 import socket
 
 from core.models import Finding
-from ui.app import findings_to_table_rows, parse_comma_separated_values, summarize_pipeline_result
+from ui.app import findings_to_table_rows, parse_comma_separated_values, scan_history_to_table_rows, summarize_pipeline_result
 
 
 def test_parse_comma_separated_values_trims_whitespace() -> None:
@@ -77,3 +77,27 @@ def test_ui_app_import_safe_without_streamlit_runtime() -> None:
     assert hasattr(module, "main")
     assert hasattr(module, "parse_comma_separated_values")
 
+
+def test_scan_history_to_table_rows_returns_display_metadata() -> None:
+    rows = scan_history_to_table_rows(
+        [
+            {
+                "scan_id": "scan-1",
+                "target": "example.com",
+                "scan_mode": "safe",
+                "status": "success",
+                "created_at": "2026-01-01T00:00:00Z",
+                "result_json": "{}",
+            }
+        ]
+    )
+
+    assert rows == [
+        {
+            "scan_id": "scan-1",
+            "target": "example.com",
+            "scan_mode": "safe",
+            "status": "success",
+            "created_at": "2026-01-01T00:00:00Z",
+        }
+    ]
