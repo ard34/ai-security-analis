@@ -96,6 +96,8 @@ class ToolResult:
 class ScanSession:
     target: Target
     scan_mode: str
+    status: str = "pending"
+    allowed_scope: dict[str, Any] = field(default_factory=dict)
     assets: list[Asset] = field(default_factory=list)
     endpoints: list[Endpoint] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
@@ -115,4 +117,3 @@ class ReportMetadata:
     scan_id: str
     generated_at: str = field(default_factory=_utc_now)
     disclaimer: str = "Findings are potential findings and require manual validation."
-
