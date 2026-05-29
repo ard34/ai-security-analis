@@ -13,3 +13,4 @@ tldextract
 playwright
 pytest
 pytest-cov
+reportlab
