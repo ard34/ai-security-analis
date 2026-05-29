@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import html
 import json
+import re
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -311,6 +313,60 @@ def findings_to_table_rows(findings: list[object] | object | None) -> list[dict[
     return rows
 
 
+def build_report_filename(scan_result: dict[str, Any], extension: str) -> str:
+    ext = str(extension or "").strip().lower().lstrip(".")
+    if ext not in {"html", "pdf"}:
+        raise ValueError("Report extension must be html or pdf.")
+    scan_id = str((scan_result or {}).get("scan_id") or "unknown")
+    safe_scan_id = re.sub(r"[^A-Za-z0-9._-]+", "-", scan_id).strip(".-_") or "unknown"
+    return f"ai-security-analyst-report-{safe_scan_id}.{ext}"
+
+
+def can_export_report(scan_result: dict[str, Any] | None) -> bool:
+    return bool(isinstance(scan_result, dict) and scan_result.get("status") and scan_result.get("target"))
+
+
+def generate_html_report_bytes(scan_result: dict[str, Any]) -> bytes:
+    from reporting.html_report import generate_html_report
+
+    return generate_html_report(scan_result).encode("utf-8")
+
+
+def generate_pdf_report_bytes(scan_result: dict[str, Any]) -> bytes:
+    from reporting.pdf_report import generate_pdf_report
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output_path = Path(tmpdir) / "report.pdf"
+        generated = generate_pdf_report(scan_result, str(output_path))
+        return Path(generated).read_bytes()
+
+
+def render_report_export(st: object) -> None:
+    section(st, "Report Export")
+    scan_result = st.session_state.get("last_scan_result")
+    if not can_export_report(scan_result):
+        st.warning("Run a dummy scan before exporting a report.")
+        return
+
+    st.caption(f"Report scan ID: {scan_result.get('scan_id', 'unknown')}")
+    html_bytes = generate_html_report_bytes(scan_result)
+    st.download_button(
+        label="Download HTML Report",
+        data=html_bytes,
+        file_name=build_report_filename(scan_result, "html"),
+        mime="text/html",
+        width="stretch",
+    )
+    pdf_bytes = generate_pdf_report_bytes(scan_result)
+    st.download_button(
+        label="Download PDF Report",
+        data=pdf_bytes,
+        file_name=build_report_filename(scan_result, "pdf"),
+        mime="application/pdf",
+        width="stretch",
+    )
+
+
 def _render_dummy_pipeline_result(st: object, result: dict[str, Any]) -> None:
     status = str(result.get("status", ""))
     st.markdown(status_badge(status or "unknown"), unsafe_allow_html=True)
@@ -387,15 +443,18 @@ def render_dummy_scan_panel(st: object) -> None:
             from core.pipeline import run_dummy_pipeline
 
             try:
-                st.session_state["dummy_pipeline_result"] = run_dummy_pipeline(
+                result = run_dummy_pipeline(
                     target=target,
                     allowed_domains=allowed_domains,
                     allowed_ips=allowed_ips,
                     scan_mode=scan_mode,
                 )
+                st.session_state["dummy_pipeline_result"] = result
+                st.session_state["last_scan_result"] = result
             except Exception as exc:
-                st.session_state["dummy_pipeline_result"] = {
+                result = {
                     "status": "error",
+                    "target": target,
                     "reason": str(exc),
                     "assets": [],
                     "endpoints": [],
@@ -407,10 +466,13 @@ def render_dummy_scan_panel(st: object) -> None:
                         "findings_generated": 0,
                     },
                 }
+                st.session_state["dummy_pipeline_result"] = result
+                st.session_state["last_scan_result"] = result
 
     result = st.session_state.get("dummy_pipeline_result")
     if isinstance(result, dict):
         _render_dummy_pipeline_result(st, result)
+    render_report_export(st)
 
 
 def render_safe_table(st: object, data: object, empty: str = "Belum ada data.") -> int:
