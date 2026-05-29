@@ -261,6 +261,158 @@ def render_attack_surface_cards(*args: object) -> str | int:
     raise TypeError("render_attack_surface_cards expects recon_data or st, cards")
 
 
+def parse_comma_separated_values(value: str) -> list[str]:
+    seen: set[str] = set()
+    items: list[str] = []
+    for item in str(value or "").split(","):
+        text = item.strip()
+        if text and text not in seen:
+            seen.add(text)
+            items.append(text)
+    return items
+
+
+def summarize_pipeline_result(result: dict[str, Any] | None) -> dict[str, int]:
+    payload = result if isinstance(result, dict) else {}
+    audit_log = payload.get("audit_log") if isinstance(payload.get("audit_log"), dict) else {}
+    return {
+        "assets": _count_items(payload.get("assets")),
+        "endpoints": _count_items(payload.get("endpoints")),
+        "findings": _count_items(payload.get("findings")),
+        "commands_executed": _count_items(audit_log.get("commands_executed")),
+        "modules_enabled": _count_items(audit_log.get("modules_enabled")),
+    }
+
+
+def _finding_value(finding: object, key: str) -> object:
+    if isinstance(finding, dict):
+        return finding.get(key, "")
+    return getattr(finding, key, "")
+
+
+def findings_to_table_rows(findings: list[object] | object | None) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for finding in _as_items(findings):
+        if not finding:
+            continue
+        rows.append(
+            {
+                "title": _finding_value(finding, "title"),
+                "severity": _finding_value(finding, "severity"),
+                "confidence": _finding_value(finding, "confidence"),
+                "asset": _finding_value(finding, "asset"),
+                "endpoint": _finding_value(finding, "endpoint"),
+                "evidence": _finding_value(finding, "evidence"),
+                "recommendation": _finding_value(finding, "recommendation"),
+                "source": _finding_value(finding, "source"),
+                "is_potential": _finding_value(finding, "is_potential"),
+            }
+        )
+    return rows
+
+
+def _render_dummy_pipeline_result(st: object, result: dict[str, Any]) -> None:
+    status = str(result.get("status", ""))
+    st.markdown(status_badge(status or "unknown"), unsafe_allow_html=True)
+    summary = summarize_pipeline_result(result)
+    cols = st.columns(5)
+    for col, (label, key) in zip(
+        cols,
+        [
+            ("Assets", "assets"),
+            ("Endpoints", "endpoints"),
+            ("Potential Findings", "findings"),
+            ("Commands Executed", "commands_executed"),
+            ("Modules Enabled", "modules_enabled"),
+        ],
+    ):
+        with col:
+            st.markdown(metric_card(label, summary[key]), unsafe_allow_html=True)
+
+    if status == "rejected":
+        st.warning(str(result.get("reason", "Target rejected by scope validation.")))
+        section(st, "Audit Log")
+        st.json(result.get("audit_log", {}))
+        return
+
+    if status != "success":
+        st.error(str(result.get("reason", "Dummy scan failed.")))
+        section(st, "Audit Log")
+        st.json(result.get("audit_log", {}))
+        return
+
+    section(st, "Scan Metadata")
+    render_safe_table(
+        st,
+        [
+            {
+                "scan_id": result.get("scan_id", ""),
+                "normalized_target": result.get("normalized_target", ""),
+                "scan_mode": result.get("scan_mode", ""),
+                "started_at": result.get("started_at", ""),
+                "ended_at": result.get("ended_at", ""),
+            }
+        ],
+    )
+    section(st, "Assets")
+    render_safe_table(st, result.get("assets", []))
+    section(st, "Endpoints")
+    render_safe_table(st, result.get("endpoints", []))
+    section(st, "Findings")
+    render_safe_table(st, findings_to_table_rows(result.get("findings", [])))
+    section(st, "Audit Log")
+    st.json(result.get("audit_log", {}))
+
+
+def render_dummy_scan_panel(st: object) -> None:
+    section(st, "Safe Dummy Scan")
+    st.caption("Local-only pipeline: scope validation, dummy asset generation, and passive header analysis. No external scanners are run.")
+    col_left, col_right = st.columns([1.2, 1])
+    with col_left:
+        target = st.text_input("Target domain / URL", key="dummy_target", placeholder="example.com or https://app.example.com")
+        allowed_domains_raw = st.text_input("Allowed domains", key="dummy_allowed_domains", placeholder="example.com, example.org")
+        allowed_ips_raw = st.text_input("Allowed IPs optional", key="dummy_allowed_ips", placeholder="8.8.8.8")
+    with col_right:
+        scan_mode = st.selectbox("Scan mode", ["strict", "safe", "standard"], index=1, key="dummy_scan_mode")
+        run_clicked = st.button("Run Dummy Scan", type="primary", width="stretch")
+
+    if run_clicked:
+        allowed_domains = parse_comma_separated_values(allowed_domains_raw)
+        allowed_ips = parse_comma_separated_values(allowed_ips_raw)
+        if not target.strip():
+            st.error("Target wajib diisi.")
+        elif not allowed_domains and not allowed_ips:
+            st.error("Isi minimal satu allowed domain atau allowed IP.")
+        else:
+            from core.pipeline import run_dummy_pipeline
+
+            try:
+                st.session_state["dummy_pipeline_result"] = run_dummy_pipeline(
+                    target=target,
+                    allowed_domains=allowed_domains,
+                    allowed_ips=allowed_ips,
+                    scan_mode=scan_mode,
+                )
+            except Exception as exc:
+                st.session_state["dummy_pipeline_result"] = {
+                    "status": "error",
+                    "reason": str(exc),
+                    "assets": [],
+                    "endpoints": [],
+                    "findings": [],
+                    "audit_log": {
+                        "modules_enabled": [],
+                        "commands_executed": [],
+                        "errors": [str(exc)],
+                        "findings_generated": 0,
+                    },
+                }
+
+    result = st.session_state.get("dummy_pipeline_result")
+    if isinstance(result, dict):
+        _render_dummy_pipeline_result(st, result)
+
+
 def render_safe_table(st: object, data: object, empty: str = "Belum ada data.") -> int:
     rows = normalize_table_rows(data)
     if rows:
@@ -334,6 +486,7 @@ def render_dashboard(st: object) -> None:
     attack_counts = load_attack_surface_counts()
     has_results = any(item["count"] for item in counts) or bool(load_recon_summary())
     hero(st, "AI Security Analyst Dashboard", "Cyber Reconnaissance & Attack Surface Intelligence", str(latest.get("status", "Ready")))
+    render_dummy_scan_panel(st)
     if not has_results:
         st.info("Belum ada hasil recon. Jalankan Reconnaissance terlebih dahulu.")
         return
