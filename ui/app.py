@@ -322,6 +322,12 @@ def build_report_filename(scan_result: dict[str, Any], extension: str) -> str:
     return f"ai-security-analyst-report-{safe_scan_id}.{ext}"
 
 
+def build_scan_json_filename(scan_result: dict[str, Any]) -> str:
+    scan_id = str((scan_result or {}).get("scan_id") or "unknown")
+    safe_scan_id = re.sub(r"[^A-Za-z0-9._-]+", "-", scan_id).strip(".-_") or "unknown"
+    return f"ai-security-analyst-scan-{safe_scan_id}.json"
+
+
 def can_export_report(scan_result: dict[str, Any] | None) -> bool:
     return bool(isinstance(scan_result, dict) and scan_result.get("status") and scan_result.get("target"))
 
@@ -339,6 +345,12 @@ def generate_pdf_report_bytes(scan_result: dict[str, Any]) -> bytes:
         output_path = Path(tmpdir) / "report.pdf"
         generated = generate_pdf_report(scan_result, str(output_path))
         return Path(generated).read_bytes()
+
+
+def generate_scan_json_bytes(scan_result: dict[str, Any]) -> bytes:
+    from storage.json_io import scan_result_to_json_bytes
+
+    return scan_result_to_json_bytes(scan_result)
 
 
 def scan_history_to_table_rows(items: list[dict[str, Any]]) -> list[dict[str, object]]:
@@ -382,6 +394,31 @@ def render_report_export(st: object) -> None:
         mime="application/pdf",
         width="stretch",
     )
+
+    st.download_button(
+        label="Download JSON Scan Result",
+        data=generate_scan_json_bytes(scan_result),
+        file_name=build_scan_json_filename(scan_result),
+        mime="application/json",
+        width="stretch",
+    )
+
+    uploaded = st.file_uploader("Import JSON scan result", type=["json"], key="scan_json_import")
+    if uploaded is not None:
+        try:
+            from storage.json_io import scan_result_from_json_bytes
+            from storage.repositories import ScanResultRepository
+
+            imported = scan_result_from_json_bytes(uploaded.getvalue())
+            st.session_state["last_scan_result"] = imported
+            st.session_state["dummy_pipeline_result"] = imported
+            try:
+                ScanResultRepository().save_scan_result(imported)
+            except Exception as storage_exc:
+                st.warning(f"Imported scan is valid but could not be saved to history: {storage_exc}")
+            st.success(f"Imported scan result: {imported.get('scan_id', 'unknown')}")
+        except Exception as exc:
+            st.error(f"Invalid scan result JSON: {exc}")
 
 
 def render_scan_history(st: object) -> None:

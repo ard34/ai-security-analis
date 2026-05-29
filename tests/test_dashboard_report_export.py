@@ -6,8 +6,10 @@ import socket
 import subprocess
 
 from ui.app import (
+    build_scan_json_filename,
     build_report_filename,
     can_export_report,
+    generate_scan_json_bytes,
     generate_html_report_bytes,
     generate_pdf_report_bytes,
 )
@@ -70,6 +72,14 @@ def test_build_report_filename_uses_unknown_for_empty_scan_id() -> None:
     assert build_report_filename(make_scan_result(""), "pdf") == "ai-security-analyst-report-unknown.pdf"
 
 
+def test_build_scan_json_filename_sanitizes_scan_id() -> None:
+    assert build_scan_json_filename(make_scan_result("../bad<script>")) == "ai-security-analyst-scan-bad-script.json"
+
+
+def test_generate_scan_json_bytes_contains_scan_id() -> None:
+    assert b'"scan_id": "scan-123"' in generate_scan_json_bytes(make_scan_result())
+
+
 def test_can_export_report_none_false() -> None:
     assert can_export_report(None) is False
 
@@ -127,4 +137,3 @@ def test_ui_app_import_safe_without_streamlit_runtime() -> None:
     module = importlib.import_module("ui.app")
     assert hasattr(module, "main")
     assert hasattr(module, "generate_pdf_report_bytes")
-
