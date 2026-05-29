@@ -83,6 +83,37 @@ streamlit run ui/app.py
 
 Untuk tahap awal, dashboard hanya boleh menjalankan dummy pipeline dan tidak boleh memanggil Nmap, Katana, ZAP, Nuclei, atau tool eksternal lain.
 
+## Configuration
+
+Project menggunakan environment variables dengan prefix:
+
+```text
+AI_SECURITY_ANALYST_
+```
+
+File `.env.example` disediakan sebagai dokumentasi konfigurasi lokal:
+
+```bash
+cp .env.example .env
+```
+
+Tahap ini belum otomatis membaca file `.env`; konfigurasi dibaca dari environment variables proses Python. Contoh override:
+
+```bash
+AI_SECURITY_ANALYST_DEFAULT_SCAN_MODE=strict python cli.py scan --target example.com --allowed-domain example.com
+```
+
+Default path lokal:
+
+```text
+data/
+reports/
+exports/
+data/ai_security_analyst.sqlite3
+```
+
+Konfigurasi bersifat local-only. Project tidak menggunakan remote database, external scanner, exploitation module, brute force, denial-of-service, atau active testing pada fase saat ini.
+
 ## CLI Usage
 
 CLI lokal saat ini hanya menjalankan safe dummy pipeline dan komponen lokal yang sudah ada. CLI tidak menjalankan external scanner, exploitation, brute force, denial-of-service, credential theft, atau active testing.

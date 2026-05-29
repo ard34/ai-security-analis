@@ -5,10 +5,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from core.config import load_config
 from core.pipeline import run_dummy_pipeline
 from reporting.html_report import save_html_report
 from reporting.pdf_report import generate_pdf_report
-from storage.database import DEFAULT_DB_PATH
 from storage.json_io import export_scan_result_to_json, import_scan_result_from_json
 from storage.repositories import ScanResultRepository
 
@@ -60,6 +60,7 @@ def format_history_rows(items: list[dict[str, Any]]) -> str:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    config = load_config()
     parser = argparse.ArgumentParser(description="AI Security Analyst local CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -67,40 +68,40 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--target", required=True)
     scan.add_argument("--allowed-domain", action="append", required=True, dest="allowed_domains")
     scan.add_argument("--allowed-ip", action="append", default=[], dest="allowed_ips")
-    scan.add_argument("--scan-mode", default="safe", choices=["strict", "safe", "standard"])
-    scan.add_argument("--db-path", default=str(DEFAULT_DB_PATH))
+    scan.add_argument("--scan-mode", default=config.default_scan_mode, choices=["strict", "safe", "standard"])
+    scan.add_argument("--db-path", default=str(config.database_path))
     scan.add_argument("--save", action="store_true")
     scan.add_argument("--json-output")
     scan.add_argument("--html-output")
     scan.add_argument("--pdf-output")
 
     history = subparsers.add_parser("history", help="List saved scan history")
-    history.add_argument("--db-path", default=str(DEFAULT_DB_PATH))
-    history.add_argument("--limit", type=int, default=20)
+    history.add_argument("--db-path", default=str(config.database_path))
+    history.add_argument("--limit", type=int, default=config.max_history_limit)
 
     show = subparsers.add_parser("show", help="Show a saved scan result")
     show.add_argument("--scan-id", required=True)
-    show.add_argument("--db-path", default=str(DEFAULT_DB_PATH))
+    show.add_argument("--db-path", default=str(config.database_path))
     show.add_argument("--full", action="store_true")
 
     export_html = subparsers.add_parser("export-html", help="Export a saved scan to HTML")
     export_html.add_argument("--scan-id", required=True)
     export_html.add_argument("--output", required=True)
-    export_html.add_argument("--db-path", default=str(DEFAULT_DB_PATH))
+    export_html.add_argument("--db-path", default=str(config.database_path))
 
     export_pdf = subparsers.add_parser("export-pdf", help="Export a saved scan to PDF")
     export_pdf.add_argument("--scan-id", required=True)
     export_pdf.add_argument("--output", required=True)
-    export_pdf.add_argument("--db-path", default=str(DEFAULT_DB_PATH))
+    export_pdf.add_argument("--db-path", default=str(config.database_path))
 
     export_json = subparsers.add_parser("export-json", help="Export a saved scan to JSON")
     export_json.add_argument("--scan-id", required=True)
     export_json.add_argument("--output", required=True)
-    export_json.add_argument("--db-path", default=str(DEFAULT_DB_PATH))
+    export_json.add_argument("--db-path", default=str(config.database_path))
 
     import_json = subparsers.add_parser("import-json", help="Import a scan result JSON")
     import_json.add_argument("--input", required=True)
-    import_json.add_argument("--db-path", default=str(DEFAULT_DB_PATH))
+    import_json.add_argument("--db-path", default=str(config.database_path))
     import_json.add_argument("--save", action="store_true")
 
     return parser

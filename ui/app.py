@@ -372,6 +372,9 @@ def scan_history_to_table_rows(items: list[dict[str, Any]]) -> list[dict[str, ob
 
 def render_report_export(st: object) -> None:
     section(st, "Report Export")
+    from core.config import load_config
+
+    app_config = load_config()
     scan_result = st.session_state.get("last_scan_result")
     if not can_export_report(scan_result):
         st.warning("Run a dummy scan before exporting a report.")
@@ -386,22 +389,30 @@ def render_report_export(st: object) -> None:
         mime="text/html",
         width="stretch",
     )
-    pdf_bytes = generate_pdf_report_bytes(scan_result)
-    st.download_button(
-        label="Download PDF Report",
-        data=pdf_bytes,
-        file_name=build_report_filename(scan_result, "pdf"),
-        mime="application/pdf",
-        width="stretch",
-    )
+    if app_config.enable_pdf_export:
+        pdf_bytes = generate_pdf_report_bytes(scan_result)
+        st.download_button(
+            label="Download PDF Report",
+            data=pdf_bytes,
+            file_name=build_report_filename(scan_result, "pdf"),
+            mime="application/pdf",
+            width="stretch",
+        )
+    else:
+        st.info("PDF export is disabled by configuration.")
 
-    st.download_button(
-        label="Download JSON Scan Result",
-        data=generate_scan_json_bytes(scan_result),
-        file_name=build_scan_json_filename(scan_result),
-        mime="application/json",
-        width="stretch",
-    )
+    if app_config.enable_json_import:
+        st.download_button(
+            label="Download JSON Scan Result",
+            data=generate_scan_json_bytes(scan_result),
+            file_name=build_scan_json_filename(scan_result),
+            mime="application/json",
+            width="stretch",
+        )
+
+    if not app_config.enable_json_import:
+        st.info("JSON import/export is disabled by configuration.")
+        return
 
     uploaded = st.file_uploader("Import JSON scan result", type=["json"], key="scan_json_import")
     if uploaded is not None:
@@ -412,10 +423,11 @@ def render_report_export(st: object) -> None:
             imported = scan_result_from_json_bytes(uploaded.getvalue())
             st.session_state["last_scan_result"] = imported
             st.session_state["dummy_pipeline_result"] = imported
-            try:
-                ScanResultRepository().save_scan_result(imported)
-            except Exception as storage_exc:
-                st.warning(f"Imported scan is valid but could not be saved to history: {storage_exc}")
+            if app_config.enable_dashboard_storage:
+                try:
+                    ScanResultRepository(app_config.database_path).save_scan_result(imported)
+                except Exception as storage_exc:
+                    st.warning(f"Imported scan is valid but could not be saved to history: {storage_exc}")
             st.success(f"Imported scan result: {imported.get('scan_id', 'unknown')}")
         except Exception as exc:
             st.error(f"Invalid scan result JSON: {exc}")
@@ -424,10 +436,15 @@ def render_report_export(st: object) -> None:
 def render_scan_history(st: object) -> None:
     section(st, "Scan History")
     try:
+        from core.config import load_config
         from storage.repositories import ScanResultRepository
 
-        repository = ScanResultRepository()
-        items = repository.list_scan_results(limit=20)
+        app_config = load_config()
+        if not app_config.enable_dashboard_storage:
+            st.info("Scan history storage is disabled by configuration.")
+            return
+        repository = ScanResultRepository(app_config.database_path)
+        items = repository.list_scan_results(limit=app_config.max_history_limit)
     except Exception as exc:
         st.warning(f"Scan history unavailable: {exc}")
         return
@@ -504,13 +521,18 @@ def _render_dummy_pipeline_result(st: object, result: dict[str, Any]) -> None:
 def render_dummy_scan_panel(st: object) -> None:
     section(st, "Safe Dummy Scan")
     st.caption("Local-only pipeline: scope validation, dummy asset generation, and passive header analysis. No external scanners are run.")
+    from core.config import load_config
+
+    app_config = load_config()
     col_left, col_right = st.columns([1.2, 1])
     with col_left:
         target = st.text_input("Target domain / URL", key="dummy_target", placeholder="example.com or https://app.example.com")
         allowed_domains_raw = st.text_input("Allowed domains", key="dummy_allowed_domains", placeholder="example.com, example.org")
         allowed_ips_raw = st.text_input("Allowed IPs optional", key="dummy_allowed_ips", placeholder="8.8.8.8")
     with col_right:
-        scan_mode = st.selectbox("Scan mode", ["strict", "safe", "standard"], index=1, key="dummy_scan_mode")
+        scan_modes = ["strict", "safe", "standard"]
+        default_mode_index = scan_modes.index(app_config.default_scan_mode) if app_config.default_scan_mode in scan_modes else 1
+        scan_mode = st.selectbox("Scan mode", scan_modes, index=default_mode_index, key="dummy_scan_mode")
         run_clicked = st.button("Run Dummy Scan", type="primary", width="stretch")
 
     if run_clicked:
@@ -532,12 +554,13 @@ def render_dummy_scan_panel(st: object) -> None:
                 )
                 st.session_state["dummy_pipeline_result"] = result
                 st.session_state["last_scan_result"] = result
-                try:
-                    from storage.repositories import ScanResultRepository
+                if app_config.enable_dashboard_storage:
+                    try:
+                        from storage.repositories import ScanResultRepository
 
-                    ScanResultRepository().save_scan_result(result)
-                except Exception as storage_exc:
-                    st.warning(f"Scan completed but could not be saved to history: {storage_exc}")
+                        ScanResultRepository(app_config.database_path).save_scan_result(result)
+                    except Exception as storage_exc:
+                        st.warning(f"Scan completed but could not be saved to history: {storage_exc}")
             except Exception as exc:
                 result = {
                     "status": "error",
