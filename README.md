@@ -75,13 +75,59 @@ pytest --cov=.
 
 ## Running Streamlit Dashboard
 
-Dashboard modular baru akan berada di:
+Dashboard utama:
 
 ```bash
-streamlit run app/dashboard.py
+streamlit run ui/app.py
 ```
 
 Untuk tahap awal, dashboard hanya boleh menjalankan dummy pipeline dan tidak boleh memanggil Nmap, Katana, ZAP, Nuclei, atau tool eksternal lain.
+
+## CLI Usage
+
+CLI lokal saat ini hanya menjalankan safe dummy pipeline dan komponen lokal yang sudah ada. CLI tidak menjalankan external scanner, exploitation, brute force, denial-of-service, credential theft, atau active testing.
+
+Run dummy scan dan simpan ke SQLite:
+
+```bash
+python cli.py scan --target example.com --allowed-domain example.com --scan-mode safe --save
+```
+
+Lihat history:
+
+```bash
+python cli.py history
+```
+
+Tampilkan scan result:
+
+```bash
+python cli.py show --scan-id <scan_id>
+```
+
+Export report HTML:
+
+```bash
+python cli.py export-html --scan-id <scan_id> --output reports/report.html
+```
+
+Export report PDF:
+
+```bash
+python cli.py export-pdf --scan-id <scan_id> --output reports/report.pdf
+```
+
+Export scan result JSON:
+
+```bash
+python cli.py export-json --scan-id <scan_id> --output exports/scan.json
+```
+
+Import scan result JSON:
+
+```bash
+python cli.py import-json --input exports/scan.json --save
+```
 
 ## Scan Modes
 
@@ -107,4 +153,3 @@ Report HTML/PDF akan memuat:
 - Findings table
 - Evidence dan recommendation
 - Disclaimer bahwa findings adalah potential findings dan perlu validasi manual
-

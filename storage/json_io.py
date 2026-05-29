@@ -39,6 +39,18 @@ def _require_non_empty_string(scan_result: dict[str, Any], key: str) -> None:
         raise ValueError(f"scan_result.{key} must be a non-empty string.")
 
 
+def _json_safe(value: object) -> object:
+    if hasattr(value, "to_dict"):
+        return value.to_dict()
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, tuple):
+        return [_json_safe(item) for item in value]
+    return value
+
+
 def validate_scan_result_json(scan_result: dict[str, Any]) -> None:
     if not isinstance(scan_result, dict):
         raise ValueError("scan_result must be a dict.")
@@ -74,7 +86,7 @@ def validate_scan_result_json(scan_result: dict[str, Any]) -> None:
 
 
 def scan_result_to_json_bytes(scan_result: dict[str, Any]) -> bytes:
-    result = deepcopy(scan_result)
+    result = _json_safe(deepcopy(scan_result))
     validate_scan_result_json(result)
     return json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8")
 
@@ -99,4 +111,3 @@ def export_scan_result_to_json(scan_result: dict[str, Any], output_path: str | P
 def import_scan_result_from_json(input_path: str | Path) -> dict[str, Any]:
     path = validate_json_input_path(input_path)
     return scan_result_from_json_bytes(path.read_bytes())
-
