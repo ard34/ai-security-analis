@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
 
-from core.models import Asset, Endpoint, ScanSession, Target, ToolResult
 from core.policies import get_scan_policy
 from core.scope import validate_scope
 from modules.headers import analyze_security_headers
@@ -14,57 +14,41 @@ def _utc_now() -> str:
 
 def _allowed_scope(allowed_domains: list[str], allowed_ips: list[str] | None) -> dict[str, list[str]]:
     return {
-        "allowed_domains": list(allowed_domains or []),
-        "allowed_ips": list(allowed_ips or []),
+        "domains": list(allowed_domains or []),
+        "ips": list(allowed_ips or []),
     }
 
 
 def _audit_log(
-    session: ScanSession,
+    scan_id: str,
     target: str,
     scan_mode: str,
     modules_enabled: list[str],
+    findings_generated: int,
     errors: list[str] | None = None,
-) -> dict[str, object]:
+) -> dict[str, Any]:
     return {
-        "scan_id": session.scan_id,
+        "scan_id": scan_id,
         "target": target,
         "scan_mode": scan_mode,
         "modules_enabled": modules_enabled,
         "commands_executed": [],
         "errors": errors or [],
-        "findings_generated": len(session.findings),
+        "findings_generated": findings_generated,
     }
+
+
+def _scan_id() -> str:
+    from uuid import uuid4
+
+    return str(uuid4())
 
 
 def _dummy_headers() -> dict[str, str]:
     return {
-        "Server": "dummy-local-test-server",
-        "X-Content-Type-Options": "nosniff",
-        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Server": "dummy",
+        "Content-Type": "text/html",
     }
-
-
-def _new_session(
-    raw_target: str,
-    normalized_target: str,
-    allowed_domains: list[str],
-    allowed_ips: list[str] | None,
-    scan_mode: str,
-    status: str,
-) -> ScanSession:
-    session = ScanSession(
-        target=Target(
-            raw_input=raw_target,
-            normalized_target=normalized_target,
-            allowed_domains=list(allowed_domains or []),
-            allowed_ips=list(allowed_ips or []),
-        ),
-        scan_mode=scan_mode,
-        status=status,
-        allowed_scope=_allowed_scope(allowed_domains, allowed_ips),
-    )
-    return session
 
 
 def run_dummy_pipeline(
@@ -72,72 +56,82 @@ def run_dummy_pipeline(
     allowed_domains: list[str],
     allowed_ips: list[str] | None = None,
     scan_mode: str = "safe",
-) -> ScanSession:
+) -> dict[str, Any]:
     """Run a local-only dummy pipeline.
 
-    This function validates policy and scope, generates synthetic assets,
-    analyzes synthetic headers, and records audit metadata. It never performs
-    network requests and never invokes external scanners or active testing.
+    The dummy pipeline connects policy validation, scope validation, synthetic
+    assets/endpoints, and passive security-header analysis. It never performs
+    network requests, never invokes external scanners, and never runs active
+    testing behavior.
     """
 
+    started_at = _utc_now()
+    scan_id = _scan_id()
+    allowed_scope = _allowed_scope(allowed_domains, allowed_ips)
     policy = get_scan_policy(scan_mode)
     scope_result = validate_scope(target, allowed_domains=allowed_domains, allowed_ips=allowed_ips)
-    normalized_target = scope_result.normalized_target or ""
 
-    if not scope_result.allowed or not normalized_target:
-        session = _new_session(target, normalized_target, allowed_domains, allowed_ips, scan_mode, "rejected")
-        session.finish()
-        session.audit_log = _audit_log(
-            session=session,
+    if not scope_result.allowed or not scope_result.normalized_target:
+        ended_at = _utc_now()
+        reason = scope_result.reason
+        audit_log = _audit_log(
+            scan_id=scan_id,
             target=target,
             scan_mode=scan_mode,
             modules_enabled=[],
-            errors=[scope_result.reason],
+            findings_generated=0,
+            errors=[reason],
         )
-        session.audit_log["allowed_scope"] = session.allowed_scope
-        session.audit_log["scope_validation"] = {
-            "allowed": scope_result.allowed,
+        return {
+            "scan_id": scan_id,
+            "target": target,
             "normalized_target": scope_result.normalized_target,
-            "reason": scope_result.reason,
+            "scan_mode": scan_mode,
+            "allowed_scope": allowed_scope,
+            "assets": [],
+            "endpoints": [],
+            "findings": [],
+            "audit_log": audit_log,
+            "started_at": started_at,
+            "ended_at": ended_at,
+            "status": "rejected",
+            "reason": reason,
+            "policy": policy,
         }
-        session.audit_log["policy"] = policy
-        return session
 
-    session = _new_session(target, normalized_target, allowed_domains, allowed_ips, scan_mode, "success")
-    asset_url = f"https://{normalized_target}"
-    endpoint_path = "/"
-    session.assets.append(Asset(value=asset_url, asset_type="web", source="dummy_pipeline"))
-    session.endpoints.append(Endpoint(url=asset_url + endpoint_path, method="GET", path=endpoint_path, source="dummy_pipeline"))
-
+    normalized_target = scope_result.normalized_target
+    asset = f"https://{normalized_target}"
+    endpoint = "/"
+    assets = [{"url": asset, "asset_type": "web", "source": "dummy_pipeline"}]
+    endpoints = [{"url": f"{asset}{endpoint}", "method": "GET", "path": endpoint, "source": "dummy_pipeline"}]
     findings = analyze_security_headers(
         target=normalized_target,
-        asset=asset_url,
+        asset=asset,
         headers=_dummy_headers(),
         is_https=True,
-        endpoint=endpoint_path,
+        endpoint=endpoint,
     )
-    session.findings.extend(findings)
-    session.tool_results.append(
-        ToolResult(
-            tool_name="security_headers",
-            status="Done",
-            result_count=len(findings),
-            commands_executed=[],
-            errors=[],
-        )
-    )
-    session.finish()
-    session.audit_log = _audit_log(
-        session=session,
+    ended_at = _utc_now()
+    audit_log = _audit_log(
+        scan_id=scan_id,
         target=normalized_target,
         scan_mode=scan_mode,
         modules_enabled=["security_headers"],
+        findings_generated=len(findings),
     )
-    session.audit_log["allowed_scope"] = session.allowed_scope
-    session.audit_log["scope_validation"] = {
-        "allowed": scope_result.allowed,
-        "normalized_target": scope_result.normalized_target,
-        "reason": scope_result.reason,
+    return {
+        "scan_id": scan_id,
+        "target": target,
+        "normalized_target": normalized_target,
+        "scan_mode": scan_mode,
+        "allowed_scope": allowed_scope,
+        "assets": assets,
+        "endpoints": endpoints,
+        "findings": findings,
+        "audit_log": audit_log,
+        "started_at": started_at,
+        "ended_at": ended_at,
+        "status": "success",
+        "reason": "",
+        "policy": policy,
     }
-    session.audit_log["policy"] = policy
-    return session

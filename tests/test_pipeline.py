@@ -1,42 +1,41 @@
 from __future__ import annotations
 
 import socket
-from unittest.mock import patch
 
 import pytest
 
-from core.models import Finding, ScanSession
+from core.models import Finding
 from core.pipeline import run_dummy_pipeline
 from core.policies import PolicyError
 
 
 def test_pipeline_accepts_authorized_exact_domain() -> None:
-    session = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
+    result = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
 
-    assert session.status == "success"
-    assert session.target.normalized_target == "example.com"
+    assert result["status"] == "success"
+    assert result["normalized_target"] == "example.com"
 
 
 def test_pipeline_accepts_authorized_subdomain() -> None:
-    session = run_dummy_pipeline("app.example.com", allowed_domains=["example.com"])
+    result = run_dummy_pipeline("app.example.com", allowed_domains=["example.com"])
 
-    assert session.status == "success"
-    assert session.target.normalized_target == "app.example.com"
+    assert result["status"] == "success"
+    assert result["normalized_target"] == "app.example.com"
 
 
 def test_pipeline_rejects_out_of_scope_domain() -> None:
-    session = run_dummy_pipeline("evil.com", allowed_domains=["example.com"])
+    result = run_dummy_pipeline("evil.com", allowed_domains=["example.com"])
 
-    assert session.status == "rejected"
-    assert session.findings == []
-    assert session.assets == []
+    assert result["status"] == "rejected"
+    assert result["findings"] == []
+    assert result["reason"]
 
 
 def test_pipeline_rejects_lookalike_domain() -> None:
-    session = run_dummy_pipeline("example.com.evil.com", allowed_domains=["example.com"])
+    result = run_dummy_pipeline("example.com.evil.com", allowed_domains=["example.com"])
 
-    assert session.status == "rejected"
-    assert session.findings == []
+    assert result["status"] == "rejected"
+    assert result["findings"] == []
 
 
 def test_pipeline_rejects_invalid_scan_mode() -> None:
@@ -45,74 +44,107 @@ def test_pipeline_rejects_invalid_scan_mode() -> None:
 
 
 def test_pipeline_generates_scan_id() -> None:
-    session = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
+    result = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
 
-    assert session.scan_id
+    assert result["scan_id"]
 
 
 def test_pipeline_generates_success_status_for_valid_target() -> None:
-    session = run_dummy_pipeline("example.com", allowed_domains=["example.com"], scan_mode="safe")
+    result = run_dummy_pipeline("example.com", allowed_domains=["example.com"], scan_mode="safe")
 
-    assert session.status == "success"
+    assert result["status"] == "success"
 
 
 def test_pipeline_generates_rejected_status_for_out_of_scope_target() -> None:
-    session = run_dummy_pipeline("evil.com", allowed_domains=["example.com"], scan_mode="safe")
+    result = run_dummy_pipeline("evil.com", allowed_domains=["example.com"], scan_mode="safe")
 
-    assert session.status == "rejected"
+    assert result["status"] == "rejected"
 
 
 def test_pipeline_generates_findings_from_security_headers_analyzer() -> None:
-    session = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
+    result = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
 
-    assert session.findings
-    assert all(isinstance(finding, Finding) for finding in session.findings)
-    assert {finding.module for finding in session.findings} == {"security_headers"}
+    assert result["findings"]
+    assert all(isinstance(finding, Finding) for finding in result["findings"])
+    assert {finding.module for finding in result["findings"]} == {"security_headers"}
 
 
 def test_all_findings_are_potential() -> None:
-    session = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
+    result = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
 
-    assert all(finding.is_potential is True for finding in session.findings)
+    assert all(finding.is_potential is True for finding in result["findings"])
 
 
 def test_commands_executed_is_empty_for_dummy_pipeline() -> None:
-    session = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
+    result = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
 
-    assert session.audit_log["commands_executed"] == []
-    assert all(result.commands_executed == [] for result in session.tool_results)
+    assert result["audit_log"]["commands_executed"] == []
 
 
-def test_pipeline_does_not_perform_network_requests() -> None:
-    with patch("socket.create_connection", side_effect=AssertionError("network request attempted")):
-        with patch.object(socket.socket, "connect", side_effect=AssertionError("network request attempted")):
-            session = run_dummy_pipeline("app.example.com", allowed_domains=["example.com"])
+def test_pipeline_does_not_use_network(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail_socket(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("Network access is not allowed in dummy pipeline")
 
-    assert session.status == "success"
-    assert session.audit_log["commands_executed"] == []
+    monkeypatch.setattr(socket, "socket", fail_socket)
+
+    result = run_dummy_pipeline("example.com", allowed_domains=["example.com"], scan_mode="safe")
+
+    assert result["status"] == "success"
 
 
 def test_audit_log_has_required_fields() -> None:
-    session = run_dummy_pipeline("app.example.com", allowed_domains=["example.com"], scan_mode="standard")
-    audit = session.audit_log
+    result = run_dummy_pipeline("app.example.com", allowed_domains=["example.com"], scan_mode="standard")
+    audit = result["audit_log"]
 
     assert audit["target"] == "app.example.com"
     assert audit["scan_mode"] == "standard"
     assert audit["modules_enabled"] == ["security_headers"]
     assert audit["commands_executed"] == []
     assert audit["errors"] == []
-    assert audit["findings_generated"] == len(session.findings)
+    assert audit["findings_generated"] == len(result["findings"])
 
 
 def test_started_at_and_ended_at_are_available() -> None:
-    session = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
+    result = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
 
-    assert session.started_at
-    assert session.ended_at
+    assert result["started_at"]
+    assert result["ended_at"]
 
 
 def test_allowed_scope_is_stored_in_result() -> None:
-    session = run_dummy_pipeline("example.com", allowed_domains=["example.com"], allowed_ips=["8.8.8.8"])
+    result = run_dummy_pipeline("example.com", allowed_domains=["example.com"], allowed_ips=["8.8.8.8"])
 
-    assert session.allowed_scope == {"allowed_domains": ["example.com"], "allowed_ips": ["8.8.8.8"]}
-    assert session.audit_log["allowed_scope"] == session.allowed_scope
+    assert result["allowed_scope"] == {"domains": ["example.com"], "ips": ["8.8.8.8"]}
+
+
+def test_rejected_result_does_not_generate_findings() -> None:
+    result = run_dummy_pipeline("evil.com", allowed_domains=["example.com"])
+
+    assert result["status"] == "rejected"
+    assert result["findings"] == []
+
+
+def test_rejected_result_still_has_audit_log() -> None:
+    result = run_dummy_pipeline("evil.com", allowed_domains=["example.com"])
+
+    assert result["audit_log"]["target"] == "evil.com"
+    assert result["audit_log"]["errors"]
+
+
+def test_success_result_has_at_least_one_asset() -> None:
+    result = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
+
+    assert result["assets"]
+
+
+def test_success_result_has_at_least_one_endpoint() -> None:
+    result = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
+
+    assert result["endpoints"]
+
+
+def test_success_result_uses_security_headers_module() -> None:
+    result = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
+
+    assert result["audit_log"]["modules_enabled"] == ["security_headers"]
+    assert {finding.module for finding in result["findings"]} == {"security_headers"}
