@@ -1,0 +1,83 @@
+target:
+  base_url: "https://fahram.web.id"
+  root_domain: ""
+
+assessment:
+  testing_methodology: "black_box"
+  profile: "pre_launch_testing"
+  project_name: "Pre-Launch Black Box Security Assessment"
+  client_name: ""
+  environment: "staging"
+  authorization_confirmed: false
+  notes: ""
+
+scope:
+  mode: "dynamic_subdomain_recon"
+  include_root_domain: true
+  include_discovered_subdomains: true
+  require_same_registered_domain: true
+  require_http_alive: true
+  auto_approve_discovered_subdomains: true
+  exclude_external_dependencies: true
+
+scan:
+  safe_mode: true
+  rate_limit_seconds: 1
+  max_urls_per_host: 200
+  active_scan: false
+  active_exploitation: false
+  destructive_tests: false
+
+proxy:
+  type: "burp"
+  host: "127.0.0.1"
+  port: 8080
+
+browser:
+  auto_open: true
+  chromium_path: "chromium"
+  user_data_dir: "~/.config/ai-security-analyst/playwright-profile"
+
+tools:
+  subfinder: "subfinder"
+  httpx: "httpx"
+  katana: "katana"
+  nuclei: "nuclei"
+  whatweb: "whatweb"
+  nmap: "nmap"
+
+cve:
+  enabled: true
+  nvd_enabled: true
+  nvd_api_key: ""
+  osv_enabled: true
+  github_advisory_enabled: false
+  cache_enabled: true
+  cache_dir: "data/cve_cache"
+  max_results_per_product: 20
+  request_timeout_seconds: 15
+  confidence_threshold: "Medium"
+  show_low_confidence: false
+
+nuclei:
+  enabled: false
+  safe_templates_only: true
+  severity:
+    - info
+    - low
+    - medium
+  include_cves: true
+  exclude_tags:
+    - dos
+    - intrusive
+    - fuzz
+    - bruteforce
+    - exploit
+  rate_limit: 5
+  timeout_seconds: 120
+
+report:
+  project_name: "AI Security Analyst Platform"
+  output_json: "reports/findings.json"
+  output_html: "reports/report.html"
+  output_pdf: "reports/report.pdf"

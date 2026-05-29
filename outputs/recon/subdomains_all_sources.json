@@ -1,0 +1,11 @@
+[
+  {
+    "hostname": "fahran.dev",
+    "sources": [
+      "target_input"
+    ],
+    "source": "target_input",
+    "accepted": true,
+    "root_domain": "fahran.dev"
+  }
+]

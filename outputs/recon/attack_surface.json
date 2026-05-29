@@ -1,0 +1,122 @@
+[
+  {
+    "category": "Public Web Assets",
+    "assets": [],
+    "endpoints": [],
+    "technology": [],
+    "risk_hints": [
+      "Internet-facing web services identified."
+    ],
+    "recommended_manual_checks": [
+      "Review exposed host purpose, ownership, and expected access paths."
+    ]
+  },
+  {
+    "category": "API Assets",
+    "assets": [],
+    "endpoints": [],
+    "technology": [],
+    "risk_hints": [
+      "API endpoints may expose object and authorization boundaries."
+    ],
+    "recommended_manual_checks": [
+      "Validate authentication, object authorization, rate limits, and schema validation manually."
+    ]
+  },
+  {
+    "category": "Authentication Surfaces",
+    "assets": [],
+    "endpoints": [],
+    "technology": [],
+    "risk_hints": [
+      "Authentication and account recovery flows require manual review."
+    ],
+    "recommended_manual_checks": [
+      "Validate session, CSRF, reset, registration, lockout, and MFA behavior safely."
+    ]
+  },
+  {
+    "category": "Admin-like Surfaces",
+    "assets": [],
+    "endpoints": [],
+    "technology": [],
+    "risk_hints": [
+      "Admin-like paths may indicate authorization boundaries."
+    ],
+    "recommended_manual_checks": [
+      "Verify role restrictions with approved low-privilege test accounts."
+    ]
+  },
+  {
+    "category": "File Upload/Download Surfaces",
+    "assets": [],
+    "endpoints": [],
+    "technology": [],
+    "risk_hints": [
+      "File handling can create access-control or content validation risk."
+    ],
+    "recommended_manual_checks": [
+      "Use only benign test files and authorized records."
+    ]
+  },
+  {
+    "category": "Search/Input Surfaces",
+    "assets": [],
+    "endpoints": [],
+    "technology": [],
+    "risk_hints": [
+      "Input surfaces may need validation and output encoding review."
+    ],
+    "recommended_manual_checks": [
+      "Use benign strings only; avoid aggressive payloads."
+    ]
+  },
+  {
+    "category": "Payment/Order/Business Surfaces",
+    "assets": [],
+    "endpoints": [],
+    "technology": [],
+    "risk_hints": [
+      "Business workflow endpoints may require logic validation."
+    ],
+    "recommended_manual_checks": [
+      "Validate server-side authorization and state transitions in staging or approved lab flows."
+    ]
+  },
+  {
+    "category": "Exposed Services",
+    "assets": [],
+    "endpoints": [],
+    "technology": [],
+    "risk_hints": [
+      "Open services expand the perimeter."
+    ],
+    "recommended_manual_checks": [
+      "Confirm each service is expected, patched, and access-controlled."
+    ]
+  },
+  {
+    "category": "Misconfiguration Indicators",
+    "assets": [],
+    "endpoints": [],
+    "technology": [],
+    "risk_hints": [
+      "Security header or cookie gaps are potential hardening items."
+    ],
+    "recommended_manual_checks": [
+      "Validate headers in browser context and confirm intended policy."
+    ]
+  },
+  {
+    "category": "Third-party / External Dependencies Observed",
+    "assets": [],
+    "endpoints": [],
+    "technology": [],
+    "risk_hints": [
+      "External resources were observed but not scanned deeply."
+    ],
+    "recommended_manual_checks": [
+      "Review supplier inventory and CSP/allowlist policy; do not scan third parties without authorization."
+    ]
+  }
+]

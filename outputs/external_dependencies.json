@@ -1,0 +1,65 @@
+[
+  {
+    "url": "https://fahram.web.id",
+    "hostname": "fahram.web.id",
+    "reason": "outside_dynamic_scope",
+    "scanned": false,
+    "analyzed": false
+  },
+  {
+    "url": "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3046151513044177",
+    "hostname": "pagead2.googlesyndication.com",
+    "reason": "outside_dynamic_scope",
+    "scanned": false,
+    "analyzed": false
+  },
+  {
+    "url": "https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447",
+    "hostname": "static.cloudflareinsights.com",
+    "reason": "outside_dynamic_scope",
+    "scanned": false,
+    "analyzed": false
+  },
+  {
+    "url": "https://proto.fahram.dev/company-profile/",
+    "hostname": "proto.fahram.dev",
+    "reason": "outside_dynamic_scope",
+    "scanned": false,
+    "analyzed": false
+  },
+  {
+    "url": "https://proto.fahram.dev/sekolah/",
+    "hostname": "proto.fahram.dev",
+    "reason": "outside_dynamic_scope",
+    "scanned": false,
+    "analyzed": false
+  },
+  {
+    "url": "https://proto.fahram.dev/umkm/",
+    "hostname": "proto.fahram.dev",
+    "reason": "outside_dynamic_scope",
+    "scanned": false,
+    "analyzed": false
+  },
+  {
+    "url": "https://proto.fahram.dev/personal-branding/",
+    "hostname": "proto.fahram.dev",
+    "reason": "outside_dynamic_scope",
+    "scanned": false,
+    "analyzed": false
+  },
+  {
+    "url": "https://proto.fahram.dev/jasa/",
+    "hostname": "proto.fahram.dev",
+    "reason": "outside_dynamic_scope",
+    "scanned": false,
+    "analyzed": false
+  },
+  {
+    "url": "https://proto.fahram.dev/landing-produk/",
+    "hostname": "proto.fahram.dev",
+    "reason": "outside_dynamic_scope",
+    "scanned": false,
+    "analyzed": false
+  }
+]

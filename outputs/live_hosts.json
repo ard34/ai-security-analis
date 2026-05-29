@@ -1,0 +1,21 @@
+[
+  {
+    "hostname": "fahram.dev",
+    "url": "https://fahram.dev",
+    "status_code": 200,
+    "title": "FahramDev — Pelatihan dan Pengembangan Aplikasi Komputer",
+    "webserver": "cloudflare",
+    "tech": [
+      "Cloudflare",
+      "Cloudflare Browser Insights",
+      "Google AdSense",
+      "Gravatar",
+      "HSTS",
+      "HTTP/3",
+      "Node.js",
+      "Nuxt.js",
+      "Vue.js"
+    ],
+    "source": "httpx"
+  }
+]

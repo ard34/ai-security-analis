@@ -1,0 +1,11 @@
+{
+  "input": "fahran.dev",
+  "normalized_url": "https://fahran.dev",
+  "hostname": "fahran.dev",
+  "registered_domain": "fahran.dev",
+  "target_kind": "domain",
+  "direct_scope": false,
+  "preserve_port": false,
+  "subfinder_allowed": true,
+  "notes": []
+}

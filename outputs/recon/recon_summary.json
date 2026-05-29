@@ -1,0 +1,674 @@
+{
+  "target": {
+    "input": "fahran.dev",
+    "normalized_url": "https://fahran.dev",
+    "hostname": "fahran.dev",
+    "registered_domain": "fahran.dev",
+    "target_kind": "domain",
+    "direct_scope": false,
+    "preserve_port": false,
+    "subfinder_allowed": true,
+    "notes": []
+  },
+  "recon_mode": "Quick Recon",
+  "selected_tools": [
+    "subfinder",
+    "assetfinder",
+    "httpx",
+    "waf_cdn",
+    "security_headers",
+    "zap_ensure_running",
+    "zap_traditional_spider",
+    "zap_ajax_spider",
+    "zap_passive_scan",
+    "attack_surface_mapping",
+    "recon_report_generation"
+  ],
+  "started_at": "2026-05-22T10:54:02+00:00",
+  "finished_at": "2026-05-22T10:55:54+00:00",
+  "methodology": "Black Box Recon",
+  "scope": {
+    "root_domain": "fahran.dev",
+    "mode": "dynamic_subdomain_recon",
+    "allowed_hosts": [
+      "fahran.dev"
+    ],
+    "allowed_urls": [
+      "https://fahran.dev"
+    ],
+    "source_files": [
+      "outputs/recon/subdomains.txt",
+      "outputs/recon/live_hosts.json"
+    ]
+  },
+  "run_status": "Completed",
+  "total_subdomains": 1,
+  "total_live_hosts": 0,
+  "total_open_ports": 0,
+  "total_services": 0,
+  "total_web_technologies": 0,
+  "total_important_endpoints": 0,
+  "total_attack_surface_categories": 10,
+  "subdomain_source_counts": {
+    "target_input": 1,
+    "subfinder": 0,
+    "assetfinder": 0
+  },
+  "tool_runs": [
+    {
+      "tool": "Target Normalization",
+      "command": [],
+      "target": "",
+      "status": "Done",
+      "started_at": "2026-05-22T10:54:02+00:00",
+      "finished_at": "2026-05-22T10:54:02+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "outputs/recon/target_normalized.json",
+      "stderr_path": "",
+      "result_count": 1,
+      "reason": ""
+    },
+    {
+      "tool": "Scope Definition",
+      "command": [],
+      "target": "",
+      "status": "Done",
+      "started_at": "2026-05-22T10:54:02+00:00",
+      "finished_at": "2026-05-22T10:54:02+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "outputs/dynamic_allowed_hosts.json",
+      "stderr_path": "",
+      "result_count": 1,
+      "reason": ""
+    },
+    {
+      "tool": "Tool Availability Check",
+      "command": [],
+      "target": "",
+      "status": "Done",
+      "started_at": "2026-05-22T10:54:02+00:00",
+      "finished_at": "2026-05-22T10:54:02+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "outputs/recon/tool_availability.json",
+      "stderr_path": "",
+      "result_count": 10,
+      "reason": ""
+    },
+    {
+      "tool": "whois",
+      "command": [],
+      "target": "",
+      "status": "Skipped",
+      "started_at": "2026-05-22T10:54:02+00:00",
+      "finished_at": "2026-05-22T10:54:02+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": "User did not select this tool"
+    },
+    {
+      "tool": "dns_records",
+      "command": [],
+      "target": "",
+      "status": "Skipped",
+      "started_at": "2026-05-22T10:54:02+00:00",
+      "finished_at": "2026-05-22T10:54:02+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": "User did not select this tool"
+    },
+    {
+      "tool": "subfinder",
+      "command": [
+        "subfinder",
+        "-d",
+        "fahran.dev",
+        "-all",
+        "-recursive",
+        "-silent"
+      ],
+      "target": "fahran.dev",
+      "status": "Done",
+      "started_at": "2026-05-22T10:54:02.578812+00:00",
+      "finished_at": "2026-05-22T10:54:18.947446+00:00",
+      "duration_seconds": 16.369,
+      "exit_code": 0,
+      "stdout_path": "",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": ""
+    },
+    {
+      "tool": "subfinder",
+      "command": [
+        "subfinder",
+        "-d",
+        "fahran.dev",
+        "-silent"
+      ],
+      "target": "fahran.dev",
+      "status": "Done",
+      "started_at": "2026-05-22T10:54:18.952747+00:00",
+      "finished_at": "2026-05-22T10:54:35.908487+00:00",
+      "duration_seconds": 16.956,
+      "exit_code": 0,
+      "stdout_path": "",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": ""
+    },
+    {
+      "tool": "amass_passive",
+      "command": [],
+      "target": "",
+      "status": "Skipped",
+      "started_at": "2026-05-22T10:54:35+00:00",
+      "finished_at": "2026-05-22T10:54:35+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": "User did not select this tool"
+    },
+    {
+      "tool": "assetfinder",
+      "command": [
+        "assetfinder",
+        "--subs-only",
+        "fahran.dev"
+      ],
+      "target": "fahran.dev",
+      "status": "Done",
+      "started_at": "2026-05-22T10:54:35.978625+00:00",
+      "finished_at": "2026-05-22T10:55:20.786717+00:00",
+      "duration_seconds": 44.808,
+      "exit_code": 0,
+      "stdout_path": "",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": ""
+    },
+    {
+      "tool": "certificate_transparency",
+      "command": [],
+      "target": "",
+      "status": "Skipped",
+      "started_at": "2026-05-22T10:55:20+00:00",
+      "finished_at": "2026-05-22T10:55:20+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": "User did not select this tool"
+    },
+    {
+      "tool": "Merge Subdomain Results",
+      "command": [],
+      "target": "",
+      "status": "Done",
+      "started_at": "2026-05-22T10:55:20+00:00",
+      "finished_at": "2026-05-22T10:55:20+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "outputs/recon/subdomains_all_sources.json",
+      "stderr_path": "",
+      "result_count": 1,
+      "reason": ""
+    },
+    {
+      "tool": "dnsx",
+      "command": [],
+      "target": "",
+      "status": "Skipped",
+      "started_at": "2026-05-22T10:55:20+00:00",
+      "finished_at": "2026-05-22T10:55:20+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": "User did not select this tool"
+    },
+    {
+      "tool": "httpx",
+      "command": [
+        "httpx",
+        "-l",
+        "outputs/recon/http_probe_targets.txt",
+        "-silent",
+        "-json",
+        "-title",
+        "-tech-detect",
+        "-status-code",
+        "-web-server"
+      ],
+      "target": "",
+      "status": "Done",
+      "started_at": "2026-05-22T10:55:20.855697+00:00",
+      "finished_at": "2026-05-22T10:55:35.339468+00:00",
+      "duration_seconds": 14.489,
+      "exit_code": 0,
+      "stdout_path": "outputs/recon/live_hosts_raw.jsonl",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": ""
+    },
+    {
+      "tool": "nmap_fast",
+      "command": [],
+      "target": "",
+      "status": "Skipped",
+      "started_at": "2026-05-22T10:55:41+00:00",
+      "finished_at": "2026-05-22T10:55:41+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": "User did not select this tool"
+    },
+    {
+      "tool": "whatweb",
+      "command": [],
+      "target": "",
+      "status": "Skipped",
+      "started_at": "2026-05-22T10:55:41+00:00",
+      "finished_at": "2026-05-22T10:55:41+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": "User did not select this tool"
+    },
+    {
+      "tool": "waf_cdn",
+      "command": [],
+      "target": "",
+      "status": "Done",
+      "started_at": "2026-05-22T10:55:41+00:00",
+      "finished_at": "2026-05-22T10:55:41+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "outputs/recon/waf_cdn.json",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": ""
+    },
+    {
+      "tool": "security_headers",
+      "command": [],
+      "target": "",
+      "status": "Done",
+      "started_at": "2026-05-22T10:55:41+00:00",
+      "finished_at": "2026-05-22T10:55:41+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "outputs/recon/security_headers.json",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": ""
+    },
+    {
+      "tool": "katana",
+      "command": [],
+      "target": "",
+      "status": "Skipped",
+      "started_at": "2026-05-22T10:55:41+00:00",
+      "finished_at": "2026-05-22T10:55:41+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": "User did not select this tool"
+    },
+    {
+      "tool": "zap_ensure_running",
+      "command": [],
+      "target": "",
+      "status": "Done",
+      "started_at": "2026-05-22T10:55:41+00:00",
+      "finished_at": "2026-05-22T10:55:41+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "outputs/zap/zap_status.json",
+      "stderr_path": "",
+      "result_count": 1,
+      "reason": ""
+    },
+    {
+      "tool": "zap_traditional_spider",
+      "command": [],
+      "target": "",
+      "status": "Skipped",
+      "started_at": "2026-05-22T10:55:41+00:00",
+      "finished_at": "2026-05-22T10:55:52+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "outputs/zap/zap_urls.json",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": "No reachable target URL for ZAP spider."
+    },
+    {
+      "tool": "zap_ajax_spider",
+      "command": [],
+      "target": "",
+      "status": "Skipped",
+      "started_at": "2026-05-22T10:55:52+00:00",
+      "finished_at": "2026-05-22T10:55:52+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "outputs/zap/zap_urls.json",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": "No reachable target URL for ZAP spider."
+    },
+    {
+      "tool": "zap_passive_scan",
+      "command": [],
+      "target": "",
+      "status": "Done",
+      "started_at": "2026-05-22T10:55:52+00:00",
+      "finished_at": "2026-05-22T10:55:54+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "outputs/zap/zap_passive_alerts.json",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": "Executed successfully; no results found."
+    },
+    {
+      "tool": "nuclei_safe",
+      "command": [],
+      "target": "",
+      "status": "Skipped",
+      "started_at": "2026-05-22T10:55:54+00:00",
+      "finished_at": "2026-05-22T10:55:54+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": "User did not select this tool"
+    },
+    {
+      "tool": "screenshot_evidence",
+      "command": [],
+      "target": "",
+      "status": "Skipped",
+      "started_at": "2026-05-22T10:55:54+00:00",
+      "finished_at": "2026-05-22T10:55:54+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": "User did not select this tool"
+    },
+    {
+      "tool": "Endpoint Classification",
+      "command": [],
+      "target": "",
+      "status": "Done",
+      "started_at": "2026-05-22T10:55:54+00:00",
+      "finished_at": "2026-05-22T10:55:54+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "outputs/recon/endpoints.json",
+      "stderr_path": "",
+      "result_count": 0,
+      "reason": ""
+    },
+    {
+      "tool": "attack_surface_mapping",
+      "command": [],
+      "target": "",
+      "status": "Done",
+      "started_at": "2026-05-22T10:55:54+00:00",
+      "finished_at": "2026-05-22T10:55:54+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "outputs/recon/attack_surface.json",
+      "stderr_path": "",
+      "result_count": 10,
+      "reason": ""
+    },
+    {
+      "tool": "recon_report_generation",
+      "command": [],
+      "target": "",
+      "status": "Done",
+      "started_at": "2026-05-22T10:55:54+00:00",
+      "finished_at": "2026-05-22T10:55:54+00:00",
+      "duration_seconds": 0,
+      "exit_code": null,
+      "stdout_path": "reports/recon_report.html",
+      "stderr_path": "",
+      "result_count": 1,
+      "reason": ""
+    }
+  ],
+  "status": [
+    {
+      "step": "Target Normalization",
+      "status": "Done",
+      "reason": "",
+      "count": 1,
+      "output_path": "outputs/recon/target_normalized.json",
+      "finished_at": "2026-05-22T10:54:02+00:00"
+    },
+    {
+      "step": "Scope Definition",
+      "status": "Done",
+      "reason": "",
+      "count": 1,
+      "output_path": "outputs/dynamic_allowed_hosts.json",
+      "finished_at": "2026-05-22T10:54:02+00:00"
+    },
+    {
+      "step": "Tool Availability Check",
+      "status": "Done",
+      "reason": "",
+      "count": 10,
+      "output_path": "outputs/recon/tool_availability.json",
+      "finished_at": "2026-05-22T10:54:02+00:00"
+    },
+    {
+      "step": "whois",
+      "status": "Skipped",
+      "reason": "User did not select this tool",
+      "count": 0,
+      "output_path": "",
+      "finished_at": "2026-05-22T10:54:02+00:00"
+    },
+    {
+      "step": "dns_records",
+      "status": "Skipped",
+      "reason": "User did not select this tool",
+      "count": 0,
+      "output_path": "",
+      "finished_at": "2026-05-22T10:54:02+00:00"
+    },
+    {
+      "step": "subfinder",
+      "status": "Done",
+      "reason": "",
+      "count": 1,
+      "output_path": "outputs/recon/subdomains_by_source.json",
+      "finished_at": "2026-05-22T10:54:35+00:00"
+    },
+    {
+      "step": "amass_passive",
+      "status": "Skipped",
+      "reason": "User did not select this tool",
+      "count": 0,
+      "output_path": "",
+      "finished_at": "2026-05-22T10:54:35+00:00"
+    },
+    {
+      "step": "assetfinder",
+      "status": "Done",
+      "reason": "",
+      "count": 1,
+      "output_path": "outputs/recon/subdomains_by_source.json",
+      "finished_at": "2026-05-22T10:55:20+00:00"
+    },
+    {
+      "step": "certificate_transparency",
+      "status": "Skipped",
+      "reason": "User did not select this tool",
+      "count": 0,
+      "output_path": "",
+      "finished_at": "2026-05-22T10:55:20+00:00"
+    },
+    {
+      "step": "Merge Subdomain Results",
+      "status": "Done",
+      "reason": "",
+      "count": 1,
+      "output_path": "outputs/recon/subdomains_all_sources.json",
+      "finished_at": "2026-05-22T10:55:20+00:00"
+    },
+    {
+      "step": "dnsx",
+      "status": "Skipped",
+      "reason": "User did not select this tool",
+      "count": 0,
+      "output_path": "",
+      "finished_at": "2026-05-22T10:55:20+00:00"
+    },
+    {
+      "step": "httpx",
+      "status": "Done",
+      "reason": "",
+      "count": 0,
+      "output_path": "outputs/recon/live_hosts.json",
+      "finished_at": "2026-05-22T10:55:41+00:00"
+    },
+    {
+      "step": "nmap_fast",
+      "status": "Skipped",
+      "reason": "User did not select this tool",
+      "count": 0,
+      "output_path": "",
+      "finished_at": "2026-05-22T10:55:41+00:00"
+    },
+    {
+      "step": "whatweb",
+      "status": "Skipped",
+      "reason": "User did not select this tool",
+      "count": 0,
+      "output_path": "",
+      "finished_at": "2026-05-22T10:55:41+00:00"
+    },
+    {
+      "step": "waf_cdn",
+      "status": "Done",
+      "reason": "",
+      "count": 0,
+      "output_path": "outputs/recon/waf_cdn.json",
+      "finished_at": "2026-05-22T10:55:41+00:00"
+    },
+    {
+      "step": "security_headers",
+      "status": "Done",
+      "reason": "",
+      "count": 0,
+      "output_path": "outputs/recon/security_headers.json",
+      "finished_at": "2026-05-22T10:55:41+00:00"
+    },
+    {
+      "step": "katana",
+      "status": "Skipped",
+      "reason": "User did not select this tool",
+      "count": 0,
+      "output_path": "",
+      "finished_at": "2026-05-22T10:55:41+00:00"
+    },
+    {
+      "step": "zap_ensure_running",
+      "status": "Done",
+      "reason": "",
+      "count": 1,
+      "output_path": "outputs/zap/zap_status.json",
+      "finished_at": "2026-05-22T10:55:41+00:00"
+    },
+    {
+      "step": "zap_traditional_spider",
+      "status": "Skipped",
+      "reason": "No reachable target URL for ZAP spider.",
+      "count": 0,
+      "output_path": "outputs/zap/zap_urls.json",
+      "finished_at": "2026-05-22T10:55:52+00:00"
+    },
+    {
+      "step": "zap_ajax_spider",
+      "status": "Skipped",
+      "reason": "No reachable target URL for ZAP spider.",
+      "count": 0,
+      "output_path": "outputs/zap/zap_urls.json",
+      "finished_at": "2026-05-22T10:55:52+00:00"
+    },
+    {
+      "step": "zap_passive_scan",
+      "status": "Done",
+      "reason": "Executed successfully; no results found.",
+      "count": 0,
+      "output_path": "outputs/zap/zap_passive_alerts.json",
+      "finished_at": "2026-05-22T10:55:54+00:00"
+    },
+    {
+      "step": "nuclei_safe",
+      "status": "Skipped",
+      "reason": "User did not select this tool",
+      "count": 0,
+      "output_path": "",
+      "finished_at": "2026-05-22T10:55:54+00:00"
+    },
+    {
+      "step": "screenshot_evidence",
+      "status": "Skipped",
+      "reason": "User did not select this tool",
+      "count": 0,
+      "output_path": "",
+      "finished_at": "2026-05-22T10:55:54+00:00"
+    },
+    {
+      "step": "Endpoint Classification",
+      "status": "Done",
+      "reason": "",
+      "count": 0,
+      "output_path": "outputs/recon/endpoints.json",
+      "finished_at": "2026-05-22T10:55:54+00:00"
+    },
+    {
+      "step": "attack_surface_mapping",
+      "status": "Done",
+      "reason": "",
+      "count": 10,
+      "output_path": "outputs/recon/attack_surface.json",
+      "finished_at": "2026-05-22T10:55:54+00:00"
+    },
+    {
+      "step": "recon_report_generation",
+      "status": "Done",
+      "reason": "",
+      "count": 1,
+      "output_path": "reports/recon_report.html",
+      "finished_at": "2026-05-22T10:55:54+00:00"
+    }
+  ],
+  "duration_seconds": 112.189
+}

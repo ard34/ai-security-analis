@@ -1,0 +1,15 @@
+requests
+pyyaml
+jinja2
+weasyprint
+beautifulsoup4
+urllib3
+typer
+rich
+streamlit
+httpx
+python-owasp-zap-v2.4
+tldextract
+playwright
+pytest
+pytest-cov
