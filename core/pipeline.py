@@ -67,7 +67,13 @@ def run_dummy_pipeline(
     fake_endpoint = Endpoint(url=f"{base_url}/login", method="GET", path="/login", source="dummy_pipeline")
     dummy_headers = _fake_headers()
 
-    findings = analyze_security_headers(dummy_headers, fake_endpoint.url, target=scope_result.normalized_target)
+    findings = analyze_security_headers(
+        target=scope_result.normalized_target,
+        asset=fake_asset.value,
+        headers=dummy_headers,
+        is_https=True,
+        endpoint=fake_endpoint.path,
+    )
     session.assets.append(fake_asset)
     session.endpoints.append(fake_endpoint)
     session.findings.extend(findings)
@@ -105,4 +111,3 @@ def run_dummy_pipeline(
         },
     }
     return session
-

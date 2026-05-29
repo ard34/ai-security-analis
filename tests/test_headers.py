@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from core.models import Finding
+from core.models import VALID_CONFIDENCES, VALID_SEVERITIES, Finding
 from modules.headers import analyze_security_headers
 
 
@@ -16,61 +16,131 @@ COMPLETE_HEADERS = {
 }
 
 
-def finding_types(findings: list[Finding]) -> set[str]:
-    return {finding.finding_type for finding in findings}
+def analyze(headers: dict[str, str] | None, is_https: bool = True) -> list[Finding]:
+    return analyze_security_headers(
+        target="example.com",
+        asset="https://app.example.com",
+        headers=headers,
+        is_https=is_https,
+        endpoint="/login",
+    )
 
 
-def test_missing_headers_generate_potential_findings() -> None:
-    findings = analyze_security_headers({}, "https://app.example.com/login")
-
-    types = finding_types(findings)
-    assert "missing_csp" in types
-    assert "missing_hsts" in types
-    assert "missing_x_frame_options" in types
-    assert "missing_x_content_type_options" in types
-    assert "missing_referrer_policy" in types
-    assert "missing_permissions_policy" in types
-    assert "missing_cross_origin_opener_policy" in types
-    assert "missing_cross_origin_resource_policy" in types
-    assert all(finding.is_potential for finding in findings)
-    assert all(finding.module == "security_headers" for finding in findings)
+def titles(findings: list[Finding]) -> set[str]:
+    return {finding.title for finding in findings}
 
 
-def test_complete_headers_generate_no_findings() -> None:
-    findings = analyze_security_headers(COMPLETE_HEADERS, "https://app.example.com/")
+def headers(findings: list[Finding]) -> set[str]:
+    return {str(finding.metadata.get("header")) for finding in findings}
+
+
+def test_missing_csp_generates_finding() -> None:
+    input_headers = dict(COMPLETE_HEADERS)
+    input_headers.pop("Content-Security-Policy")
+
+    findings = analyze(input_headers)
+
+    assert "Content-Security-Policy" in headers(findings)
+    assert findings[0].finding_type == "missing_header"
+
+
+def test_missing_hsts_on_https_generates_finding() -> None:
+    input_headers = dict(COMPLETE_HEADERS)
+    input_headers.pop("Strict-Transport-Security")
+
+    findings = analyze(input_headers, is_https=True)
+
+    assert "Strict-Transport-Security" in headers(findings)
+
+
+def test_missing_hsts_on_http_does_not_generate_hsts_finding() -> None:
+    input_headers = dict(COMPLETE_HEADERS)
+    input_headers.pop("Strict-Transport-Security")
+
+    findings = analyze(input_headers, is_https=False)
+
+    assert "Strict-Transport-Security" not in headers(findings)
     assert findings == []
 
 
-def test_headers_are_case_insensitive() -> None:
-    headers = {key.lower(): value for key, value in COMPLETE_HEADERS.items()}
-    headers["content-security-policy"] = "default-src 'self'"
+def test_complete_headers_generate_empty_list() -> None:
+    assert analyze(COMPLETE_HEADERS) == []
 
-    findings = analyze_security_headers(headers, "https://app.example.com/")
 
-    assert findings == []
+def test_header_matching_is_case_insensitive() -> None:
+    input_headers = {key.lower(): value for key, value in COMPLETE_HEADERS.items()}
+
+    assert analyze(input_headers) == []
 
 
 def test_empty_headers_do_not_crash() -> None:
-    findings = analyze_security_headers(None, "https://app.example.com/")
+    findings = analyze({})
+
     assert len(findings) == 8
-    assert all(isinstance(finding, Finding) for finding in findings)
 
 
-def test_hsts_is_required_for_https() -> None:
-    headers = dict(COMPLETE_HEADERS)
-    headers.pop("Strict-Transport-Security")
+def test_none_headers_do_not_crash() -> None:
+    findings = analyze(None)
 
-    findings = analyze_security_headers(headers, "https://app.example.com/")
-
-    assert finding_types(findings) == {"missing_hsts"}
+    assert len(findings) == 8
 
 
-def test_hsts_is_not_required_for_http() -> None:
-    headers = dict(COMPLETE_HEADERS)
-    headers.pop("Strict-Transport-Security")
+def test_all_findings_are_potential() -> None:
+    assert all(finding.is_potential is True for finding in analyze({}))
 
-    findings = analyze_security_headers(headers, "http://app.example.com/")
 
-    assert "missing_hsts" not in finding_types(findings)
-    assert findings == []
+def test_all_findings_have_valid_severity() -> None:
+    assert all(finding.severity in VALID_SEVERITIES for finding in analyze({}))
 
+
+def test_all_findings_have_valid_confidence() -> None:
+    assert all(finding.confidence in VALID_CONFIDENCES for finding in analyze({}))
+
+
+def test_missing_x_content_type_options_detected() -> None:
+    input_headers = dict(COMPLETE_HEADERS)
+    input_headers.pop("X-Content-Type-Options")
+
+    assert "X-Content-Type-Options" in headers(analyze(input_headers))
+
+
+def test_missing_referrer_policy_detected() -> None:
+    input_headers = dict(COMPLETE_HEADERS)
+    input_headers.pop("Referrer-Policy")
+
+    assert "Referrer-Policy" in headers(analyze(input_headers))
+
+
+def test_missing_permissions_policy_detected() -> None:
+    input_headers = dict(COMPLETE_HEADERS)
+    input_headers.pop("Permissions-Policy")
+
+    assert "Permissions-Policy" in headers(analyze(input_headers))
+
+
+def test_missing_coop_detected() -> None:
+    input_headers = dict(COMPLETE_HEADERS)
+    input_headers.pop("Cross-Origin-Opener-Policy")
+
+    assert "Cross-Origin-Opener-Policy" in headers(analyze(input_headers))
+
+
+def test_missing_corp_detected() -> None:
+    input_headers = dict(COMPLETE_HEADERS)
+    input_headers.pop("Cross-Origin-Resource-Policy")
+
+    assert "Cross-Origin-Resource-Policy" in headers(analyze(input_headers))
+
+
+def test_findings_use_security_headers_module() -> None:
+    assert all(finding.module == "security_headers" for finding in analyze({}))
+
+
+def test_findings_use_headers_module_source() -> None:
+    assert all(finding.source == "headers_module" for finding in analyze({}))
+
+
+def test_severity_and_confidence_are_not_aggressive() -> None:
+    findings = analyze({})
+    assert {finding.severity for finding in findings} <= {"info", "low"}
+    assert {finding.confidence for finding in findings} <= {"low", "medium"}
