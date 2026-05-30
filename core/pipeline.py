@@ -3,6 +3,12 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from core.execution import (
+    SafeExecutionContext,
+    create_execution_decision,
+    execution_decision_to_dict,
+    safe_execution_context_to_dict,
+)
 from core.logging import audit_event_to_dict, create_audit_event
 from core.models import Finding
 from core.modules import ModuleContext, merge_module_results, module_result_to_dict, run_module_safely
@@ -90,6 +96,22 @@ def run_dummy_pipeline(
     scan_id = _scan_id()
     allowed_scope = _allowed_scope(allowed_domains, allowed_ips)
     policy = get_scan_policy(scan_mode)
+    execution_context = SafeExecutionContext(
+        scan_id=scan_id,
+        target=target,
+        allowed_domains=allowed_domains,
+        allowed_ips=allowed_ips or [],
+        scan_mode=scan_mode,
+        metadata={"pipeline": "dummy_pipeline"},
+    )
+    execution_decisions = [
+        create_execution_decision(
+            "local:dummy_pipeline",
+            target,
+            execution_context,
+            metadata={"stage": "pipeline_start"},
+        )
+    ]
     audit_events = [
         audit_event_to_dict(
             create_audit_event(
@@ -140,6 +162,8 @@ def run_dummy_pipeline(
             "findings": [],
             "audit_log": audit_log,
             "audit_events": audit_events,
+            "execution_context": safe_execution_context_to_dict(execution_context),
+            "execution_decisions": [execution_decision_to_dict(decision) for decision in execution_decisions],
             "started_at": started_at,
             "ended_at": ended_at,
             "status": "rejected",
@@ -159,6 +183,14 @@ def run_dummy_pipeline(
         scan_mode=scan_mode,
         policy=policy,
         metadata={"headers": _dummy_headers(), "is_https": True, "asset": asset, "endpoint": endpoint},
+    )
+    execution_decisions.append(
+        create_execution_decision(
+            "local:security_headers",
+            normalized_target,
+            execution_context,
+            metadata={"module": "security_headers"},
+        )
     )
     module_results = [
         run_module_safely(DummyPassiveModule(), module_context),
@@ -210,6 +242,8 @@ def run_dummy_pipeline(
         "findings": findings,
         "audit_log": audit_log,
         "audit_events": audit_events,
+        "execution_context": safe_execution_context_to_dict(execution_context),
+        "execution_decisions": [execution_decision_to_dict(decision) for decision in execution_decisions],
         "module_results": [module_result_to_dict(result) for result in module_results],
         "module_summary": merged_modules,
         "started_at": started_at,

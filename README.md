@@ -329,6 +329,40 @@ Every recommendation defaults to:
 
 `needs_manual_validation`
 
+## Safe Execution Engine
+
+AI Security Analyst includes a Safe Execution Engine that acts as a mandatory guardrail before any future live reconnaissance action.
+
+The execution engine enforces:
+
+- authorized scope validation
+- scan budget
+- request budget
+- timeout configuration
+- rate limiting configuration
+- concurrency limits
+- error limits
+- kill switch
+- dangerous action blocking
+- audit event generation
+- metadata redaction
+
+By default, network actions are disabled.
+
+Blocked by default:
+
+- live HTTP requests
+- DNS lookups
+- external scanner execution
+- exploit attempts
+- brute force
+- denial-of-service
+- credential theft
+- active ZAP scan
+- aggressive fuzzing
+
+The current stage does not perform live scanning. It only prepares safety controls for future safe-live modules.
+
 ## Scan Modes
 
 - `strict`: recon sangat rendah risiko, port scan dan crawler eksternal disabled.
