@@ -10,4 +10,5 @@ htmlcov/
 reports/
 data/
 *.log
+logs/*.jsonl
 .DS_Store

@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from core.logging import audit_event_to_dict, create_audit_event
 from core.policies import get_scan_policy
 from core.scope import validate_scope
 from modules.headers import analyze_security_headers
@@ -69,11 +70,37 @@ def run_dummy_pipeline(
     scan_id = _scan_id()
     allowed_scope = _allowed_scope(allowed_domains, allowed_ips)
     policy = get_scan_policy(scan_mode)
+    audit_events = [
+        audit_event_to_dict(
+            create_audit_event(
+                "scan_started",
+                "Dummy scan started",
+                scan_id=scan_id,
+                target=target,
+                status="started",
+                source="pipeline",
+                metadata={"scan_mode": scan_mode, "allowed_scope": allowed_scope},
+            )
+        )
+    ]
     scope_result = validate_scope(target, allowed_domains=allowed_domains, allowed_ips=allowed_ips)
 
     if not scope_result.allowed or not scope_result.normalized_target:
         ended_at = _utc_now()
         reason = scope_result.reason
+        audit_events.append(
+            audit_event_to_dict(
+                create_audit_event(
+                    "scan_rejected",
+                    "Dummy scan rejected by scope validation",
+                    scan_id=scan_id,
+                    target=target,
+                    status="rejected",
+                    source="pipeline",
+                    metadata={"reason": reason, "scan_mode": scan_mode},
+                )
+            )
+        )
         audit_log = _audit_log(
             scan_id=scan_id,
             target=target,
@@ -92,6 +119,7 @@ def run_dummy_pipeline(
             "endpoints": [],
             "findings": [],
             "audit_log": audit_log,
+            "audit_events": audit_events,
             "started_at": started_at,
             "ended_at": ended_at,
             "status": "rejected",
@@ -112,6 +140,24 @@ def run_dummy_pipeline(
         endpoint=endpoint,
     )
     ended_at = _utc_now()
+    audit_events.append(
+        audit_event_to_dict(
+            create_audit_event(
+                "scan_completed",
+                "Dummy scan completed",
+                scan_id=scan_id,
+                target=normalized_target,
+                status="success",
+                source="pipeline",
+                metadata={
+                    "scan_mode": scan_mode,
+                    "modules_enabled": ["security_headers"],
+                    "findings_generated": len(findings),
+                    "commands_executed": [],
+                },
+            )
+        )
+    )
     audit_log = _audit_log(
         scan_id=scan_id,
         target=normalized_target,
@@ -129,6 +175,7 @@ def run_dummy_pipeline(
         "endpoints": endpoints,
         "findings": findings,
         "audit_log": audit_log,
+        "audit_events": audit_events,
         "started_at": started_at,
         "ended_at": ended_at,
         "status": "success",

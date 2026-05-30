@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import socket
 
 import pytest
@@ -148,3 +149,44 @@ def test_success_result_uses_security_headers_module() -> None:
 
     assert result["audit_log"]["modules_enabled"] == ["security_headers"]
     assert {finding.module for finding in result["findings"]} == {"security_headers"}
+
+
+def test_success_result_has_audit_events() -> None:
+    result = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
+
+    assert isinstance(result["audit_events"], list)
+    assert result["audit_events"]
+
+
+def test_rejected_result_has_audit_events() -> None:
+    result = run_dummy_pipeline("evil.com", allowed_domains=["example.com"])
+
+    assert isinstance(result["audit_events"], list)
+    assert result["audit_events"]
+
+
+def test_success_audit_events_include_scan_started() -> None:
+    result = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
+
+    assert "scan_started" in {event["event_type"] for event in result["audit_events"]}
+
+
+def test_success_audit_events_include_scan_completed() -> None:
+    result = run_dummy_pipeline("example.com", allowed_domains=["example.com"])
+
+    assert "scan_completed" in {event["event_type"] for event in result["audit_events"]}
+
+
+def test_rejected_audit_events_include_scan_rejected() -> None:
+    result = run_dummy_pipeline("evil.com", allowed_domains=["example.com"])
+
+    assert "scan_rejected" in {event["event_type"] for event in result["audit_events"]}
+
+
+def test_audit_events_do_not_contain_sensitive_metadata() -> None:
+    result = run_dummy_pipeline("https://example.com?api_key=abc", allowed_domains=["example.com"])
+
+    payload = json.dumps(result["audit_events"])
+
+    assert "api_key=[REDACTED]" in payload
+    assert "api_key=abc" not in payload

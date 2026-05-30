@@ -6,6 +6,7 @@ import socket
 import subprocess
 
 from cli import build_parser, format_history_rows, format_scan_summary, run_cli
+from core.logging import read_audit_events
 from storage.json_io import export_scan_result_to_json
 
 
@@ -38,8 +39,18 @@ def db_arg(tmp_path) -> list[str]:
     return ["--db-path", str(tmp_path / "test.sqlite3")]
 
 
+def audit_arg(tmp_path) -> list[str]:
+    return ["--audit-log-path", str(tmp_path / "audit.jsonl")]
+
+
 def test_build_parser_can_be_created() -> None:
     assert build_parser().prog
+
+
+def test_cli_accepts_audit_log_path_argument(tmp_path) -> None:
+    args = build_parser().parse_args(["scan", "--target", "example.com", "--allowed-domain", "example.com", *audit_arg(tmp_path)])
+
+    assert args.audit_log_path == str(tmp_path / "audit.jsonl")
 
 
 def test_scan_command_runs_dummy_pipeline(tmp_path, capsys) -> None:
@@ -240,3 +251,87 @@ def test_format_scan_summary_includes_required_fields() -> None:
 def test_format_history_rows_empty_message() -> None:
     assert format_history_rows([]) == "No scan history found."
 
+
+def test_scan_save_writes_audit_log(tmp_path) -> None:
+    audit_path = tmp_path / "audit.jsonl"
+
+    code = run_cli(
+        [
+            "scan",
+            "--target",
+            "example.com",
+            "--allowed-domain",
+            "example.com",
+            *db_arg(tmp_path),
+            "--save",
+            "--audit-log-path",
+            str(audit_path),
+        ]
+    )
+
+    assert code == 0
+    event_types = {event["event_type"] for event in read_audit_events(audit_path)}
+    assert "cli_action" in event_types
+    assert "history_saved" in event_types
+
+
+def test_export_html_writes_report_exported_event(tmp_path) -> None:
+    scan_id = save_one_scan(tmp_path)
+    audit_path = tmp_path / "audit.jsonl"
+    output = tmp_path / "report.html"
+
+    assert run_cli(["export-html", "--scan-id", scan_id, "--output", str(output), *db_arg(tmp_path), "--audit-log-path", str(audit_path)]) == 0
+
+    assert "report_exported" in {event["event_type"] for event in read_audit_events(audit_path)}
+
+
+def test_export_json_writes_json_exported_event(tmp_path) -> None:
+    scan_id = save_one_scan(tmp_path)
+    audit_path = tmp_path / "audit.jsonl"
+    output = tmp_path / "scan.json"
+
+    assert run_cli(["export-json", "--scan-id", scan_id, "--output", str(output), *db_arg(tmp_path), "--audit-log-path", str(audit_path)]) == 0
+
+    assert "json_exported" in {event["event_type"] for event in read_audit_events(audit_path)}
+
+
+def test_import_json_writes_json_imported_event(tmp_path) -> None:
+    input_path = tmp_path / "scan.json"
+    audit_path = tmp_path / "audit.jsonl"
+    export_scan_result_to_json(make_scan_result(), input_path)
+
+    assert run_cli(["import-json", "--input", str(input_path), *db_arg(tmp_path), "--audit-log-path", str(audit_path)]) == 0
+
+    assert "json_imported" in {event["event_type"] for event in read_audit_events(audit_path)}
+
+
+def test_cli_error_writes_error_event_when_possible(tmp_path) -> None:
+    audit_path = tmp_path / "audit.jsonl"
+    input_path = tmp_path / "bad.json"
+    input_path.write_text("{bad json", encoding="utf-8")
+
+    assert run_cli(["import-json", "--input", str(input_path), *db_arg(tmp_path), "--audit-log-path", str(audit_path)]) != 0
+
+    assert "error" in {event["event_type"] for event in read_audit_events(audit_path)}
+
+
+def test_cli_audit_log_does_not_contain_secret(tmp_path) -> None:
+    audit_path = tmp_path / "audit.jsonl"
+
+    code = run_cli(
+        [
+            "scan",
+            "--target",
+            "https://example.com?token=abc",
+            "--allowed-domain",
+            "example.com",
+            *db_arg(tmp_path),
+            "--audit-log-path",
+            str(audit_path),
+        ]
+    )
+
+    assert code == 0
+    content = audit_path.read_text(encoding="utf-8")
+    assert "token=abc" not in content
+    assert "token=[REDACTED]" in content

@@ -160,6 +160,43 @@ Import scan result JSON:
 python cli.py import-json --input exports/scan.json --save
 ```
 
+## Logging and Audit Trail
+
+AI Security Analyst writes local audit events in JSON Lines format.
+
+Default audit log path:
+
+```bash
+logs/audit.jsonl
+```
+
+Example CLI usage:
+
+```bash
+python cli.py scan \
+  --target example.com \
+  --allowed-domain example.com \
+  --save \
+  --audit-log-path logs/audit.jsonl
+```
+
+Audit events may include:
+
+* scan_started
+* scan_completed
+* scan_rejected
+* report_exported
+* json_imported
+* json_exported
+* history_saved
+* cli_action
+* dashboard_action
+* error
+
+Sensitive values such as passwords, tokens, API keys, cookies, authorization headers, sessions, and credentials are redacted before being written.
+
+The audit trail is local-only and does not send data to any remote service.
+
 ## Scan Modes
 
 - `strict`: recon sangat rendah risiko, port scan dan crawler eksternal disabled.
