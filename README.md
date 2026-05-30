@@ -303,6 +303,32 @@ Findings are deduplicated using deterministic fingerprints based on:
 
 Deduplicated findings remain potential findings until manually validated by a human pentester.
 
+## Manual Testing Recommendation Engine
+
+AI Security Analyst can convert findings and evidence into safe manual testing recommendations for authorized pentesters.
+
+The recommendation engine helps prioritize:
+
+- security headers review
+- authentication controls
+- authorization and access control checks
+- session management review
+- API security review
+- information disclosure review
+- transport security review
+- DNS security review
+- rate limiting review
+- file upload review
+- business logic review
+
+All recommendations are designed for non-destructive manual validation by authorized testers.
+
+The engine does not generate exploit payloads, brute force instructions, denial-of-service steps, credential theft instructions, authentication bypass instructions, or scanner commands.
+
+Every recommendation defaults to:
+
+`needs_manual_validation`
+
 ## Scan Modes
 
 - `strict`: recon sangat rendah risiko, port scan dan crawler eksternal disabled.

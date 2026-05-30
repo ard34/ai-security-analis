@@ -7,6 +7,11 @@ from core.assessment import AssessmentProject, assessment_project_to_dict, is_as
 from core.evidence import collect_evidence_from_scan_result, summarize_evidence
 from core.finding_dedup import deduplicate_findings, deduped_findings_to_dicts, summarize_deduped_findings
 from core.logging import redact_sensitive_data
+from core.manual_testing import (
+    generate_manual_testing_recommendations,
+    manual_test_recommendation_to_dict,
+    summarize_manual_testing_recommendations,
+)
 from core.prompts import build_refusal_message
 from core.tool_router import build_tool_request, classify_intent, is_unsafe_user_request, route_tool_request
 
@@ -86,8 +91,18 @@ def analyze_user_request(
         findings = safe_context.get("findings") or []
         if not findings and isinstance(safe_context.get("scan_result"), dict):
             findings = safe_context["scan_result"].get("findings", [])
-        guidance = generate_manual_testing_guidance(findings if isinstance(findings, list) else [])
-        return AgentResponse(True, intent, "Manual testing guidance generated for potential findings.", {"guidance": guidance})
+        recommendations = generate_manual_testing_recommendations(findings if isinstance(findings, list) else [])
+        recommendation_dicts = [manual_test_recommendation_to_dict(item) for item in recommendations]
+        return AgentResponse(
+            True,
+            intent,
+            "Manual testing recommendations generated for authorized, non-destructive validation.",
+            {
+                "guidance": recommendation_dicts,
+                "recommendations": recommendation_dicts,
+                "summary": summarize_manual_testing_recommendations(recommendations),
+            },
+        )
 
     if intent == "generate_report":
         tool_response = route_tool_request(build_tool_request(intent), safe_context)
@@ -134,39 +149,17 @@ def _scan_result_findings(scan_result: dict[str, Any]) -> list[dict[str, Any]]:
 
 def generate_manual_testing_guidance(findings: list[dict]) -> list[dict]:
     guidance: list[dict[str, Any]] = []
-    for finding in findings or []:
-        if not isinstance(finding, dict):
-            continue
-        module = str(finding.get("module") or "").lower()
-        title = str(finding.get("title") or "Potential finding")
-        severity = str(finding.get("severity") or "low").lower()
-        evidence = str(finding.get("evidence") or "")
-        if module == "security_headers" or "header" in title.lower():
-            area = "Security Headers"
-            manual_test = "Review whether the missing header materially increases browser-side risk based on actual application behavior and injection points."
-        else:
-            area = title
-            manual_test = "Review the evidence, reproduce safely inside the approved environment, and document whether the risk is valid."
+    for item in generate_manual_testing_recommendations(findings):
         guidance.append(
             redact_sensitive_data(
                 {
-                    "area": area,
-                    "priority": severity,
-                    "manual_test": manual_test,
-                    "evidence": evidence,
-                    "validation_status": "needs_manual_validation",
+                    "area": item.area,
+                    "priority": item.priority,
+                    "manual_test": item.manual_steps[0] if item.manual_steps else "Review available evidence safely.",
+                    "evidence": ", ".join(item.evidence_refs) if item.evidence_refs else item.description,
+                    "validation_status": item.validation_status,
                 }
             )
-        )
-    if not guidance:
-        guidance.append(
-            {
-                "area": "Assessment Planning",
-                "priority": "info",
-                "manual_test": "Review available assets, endpoints, and potential findings before selecting manual validation tasks.",
-                "evidence": "No potential findings were provided.",
-                "validation_status": "needs_manual_validation",
-            }
         )
     return guidance
 
