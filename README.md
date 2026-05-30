@@ -363,6 +363,53 @@ Blocked by default:
 
 The current stage does not perform live scanning. It only prepares safety controls for future safe-live modules.
 
+## Safe HTTP Client and Safe DNS Resolver
+
+AI Security Analyst includes guarded live-recon primitives for future safe-live modules.
+
+### Safe HTTP Client
+
+The Safe HTTP Client supports only:
+
+- GET
+- HEAD
+
+It enforces:
+
+- authorized scope validation
+- execution engine decision
+- timeout configuration
+- sensitive header filtering
+- redirect scope validation
+- body size limit
+- audit event generation
+- no external command execution
+
+It does not perform:
+
+- exploitation
+- brute force
+- fuzzing
+- denial-of-service
+- credential theft
+- authentication bypass
+- unsafe HTTP methods
+
+### Safe DNS Resolver
+
+The Safe DNS Resolver supports explicit authorized DNS queries only.
+
+It does not perform:
+
+- subdomain brute force
+- zone transfer
+- DNS enumeration
+- external command execution
+- `dig`
+- `nslookup`
+
+By default, network access is disabled unless explicitly enabled by execution policy and scope validation.
+
 ## Scan Modes
 
 - `strict`: recon sangat rendah risiko, port scan dan crawler eksternal disabled.
