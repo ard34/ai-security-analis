@@ -248,6 +248,33 @@ Each assessment includes:
 
 A scan action should only run when the assessment is approved and the target is in scope.
 
+## AI Red Team Copilot Chat UI
+
+The dashboard includes a local chat-style interface for the AI Red Team Copilot.
+
+The chat UI can:
+
+- explain available capabilities
+- classify user intent
+- reject unsafe requests
+- use the active assessment context
+- analyze local scan results
+- generate safe manual testing guidance
+- help prepare report workflows
+
+Current limitations:
+
+- no external LLM API calls
+- no live scanning
+- no external scanner execution
+- no exploitation
+- no brute force
+- no denial-of-service
+- no credential theft
+- no authentication bypass
+
+All outputs are intended to support authorized human pentesters. Findings remain potential until manually validated.
+
 ## Scan Modes
 
 - `strict`: recon sangat rendah risiko, port scan dan crawler eksternal disabled.

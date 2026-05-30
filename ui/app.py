@@ -29,7 +29,7 @@ from ui.data_loader import (
 from ui.theme import inject_cyberpunk_theme, metric_card, neon_card, status_badge
 
 
-MENU = ["Dashboard", "Reconnaissance", "Assets", "Attack Surface", "OWASP ZAP", "Reports", "Settings", "Debug"]
+MENU = ["Dashboard", "Reconnaissance", "Assets", "Attack Surface", "OWASP ZAP", "AI Red Team Copilot", "Reports", "Settings", "Debug"]
 
 MODE_DURATION = {
     "Quick Recon": "30 detik - 2 menit",
@@ -993,6 +993,75 @@ def render_reports(st: object, config: dict[str, Any]) -> None:
     render_safe_table(st, rows)
 
 
+def render_copilot(st: object) -> None:
+    from core.assessment import approve_assessment_project, create_assessment_project
+    from ui.chat import build_agent_context_from_session, handle_chat_turn, initialize_chat_history
+
+    hero(st, "AI Red Team Copilot", "Local chat assistant for authorized assessment workflows", "Local Only")
+    st.header("AI Red Team Copilot")
+
+    active_project = st.session_state.get("active_assessment")
+    with st.sidebar:
+        st.divider()
+        st.subheader("Active Assessment")
+        if active_project is None:
+            st.info("No approved assessment active.")
+        else:
+            status = getattr(active_project, "status", "unknown")
+            name = getattr(getattr(active_project, "metadata", None), "name", "Assessment")
+            st.caption(f"{name} | status: {status}")
+            if status != "approved" and st.button("Approve Assessment", width="stretch"):
+                st.session_state["active_assessment"] = approve_assessment_project(active_project)
+                st.success("Assessment approved.")
+                st.rerun()
+
+        with st.expander("Create Assessment", expanded=active_project is None):
+            name = st.text_input("Name", key="chat_assessment_name")
+            owner = st.text_input("Owner", key="chat_assessment_owner")
+            operator = st.text_input("Operator", key="chat_assessment_operator")
+            authorization_note = st.text_area("Authorization note", key="chat_assessment_auth")
+            allowed_domains_raw = st.text_input("Allowed domains", key="chat_assessment_domains", placeholder="example.com, app.example.com")
+            environment = st.selectbox("Environment", ["local", "dev", "staging", "preprod", "production"], index=2, key="chat_assessment_env")
+            scan_mode = st.selectbox("Scan mode", ["strict", "safe", "standard"], index=1, key="chat_assessment_scan_mode")
+            if st.button("Create Draft Assessment", width="stretch"):
+                try:
+                    project = create_assessment_project(
+                        name=name,
+                        owner=owner,
+                        operator=operator,
+                        authorization_note=authorization_note,
+                        allowed_domains=parse_comma_separated_values(allowed_domains_raw),
+                        environment=environment,
+                        scan_mode=scan_mode,
+                    )
+                    st.session_state["active_assessment"] = project
+                    st.success("Draft assessment created.")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Assessment could not be created: {exc}")
+
+    st.session_state["chat_history"] = initialize_chat_history(st.session_state.get("chat_history"))
+    for item in st.session_state["chat_history"]:
+        role = str(item.get("role") or "assistant")
+        content = str(item.get("content") or "")
+        with st.chat_message(role if role in {"user", "assistant"} else "assistant"):
+            st.markdown(content)
+
+    user_prompt = st.chat_input("Ask the AI Red Team Copilot...")
+    if user_prompt:
+        context = build_agent_context_from_session(st.session_state)
+        project = st.session_state.get("active_assessment")
+        history, response = handle_chat_turn(
+            user_prompt,
+            st.session_state.get("chat_history", []),
+            project=project,
+            context=context,
+        )
+        st.session_state["chat_history"] = history
+        st.session_state["last_agent_response"] = response
+        st.rerun()
+
+
 def render_settings(st: object, config: dict[str, Any]) -> None:
     hero(st, "Settings", "Minimal platform configuration", "Cyberpunk Neon")
     proxy = config.get("proxy", {}) if isinstance(config.get("proxy"), dict) else {}
@@ -1059,6 +1128,8 @@ def main() -> None:
         render_attack_surface(st)
     elif page == "OWASP ZAP":
         render_zap(st)
+    elif page == "AI Red Team Copilot":
+        render_copilot(st)
     elif page == "Reports":
         render_reports(st, config)
     elif page == "Settings":
