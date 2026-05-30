@@ -275,6 +275,34 @@ Current limitations:
 
 All outputs are intended to support authorized human pentesters. Findings remain potential until manually validated.
 
+## Evidence Store and Finding Deduplication
+
+AI Security Analyst stores normalized local evidence for each assessment and scan result.
+
+Evidence may include:
+
+- HTTP header observations
+- DNS records
+- endpoints
+- technology observations
+- finding evidence
+- audit events
+- manual notes
+- imported artifacts
+
+Sensitive values such as passwords, tokens, API keys, cookies, authorization headers, credentials, sessions, and private keys are redacted before evidence is stored.
+
+Findings are deduplicated using deterministic fingerprints based on:
+
+- target
+- asset
+- endpoint
+- module
+- finding type
+- title
+
+Deduplicated findings remain potential findings until manually validated by a human pentester.
+
 ## Scan Modes
 
 - `strict`: recon sangat rendah risiko, port scan dan crawler eksternal disabled.

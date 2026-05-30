@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from core.assessment import AssessmentProject, assessment_project_to_dict, is_assessment_approved
+from core.evidence import collect_evidence_from_scan_result, summarize_evidence
+from core.finding_dedup import deduplicate_findings, deduped_findings_to_dicts, summarize_deduped_findings
 from core.logging import redact_sensitive_data
 from core.prompts import build_refusal_message
 from core.tool_router import build_tool_request, classify_intent, is_unsafe_user_request, route_tool_request
@@ -93,7 +95,22 @@ def analyze_user_request(
             return AgentResponse(True, intent, tool_response.message, tool_response.data)
         return AgentResponse(True, intent, "Report generation is available when a local scan_result is provided.", {"next_step": "Provide scan_result in context."})
 
-    if intent in {"analyze_scan_result", "export_json", "import_json", "show_history"}:
+    if intent == "analyze_scan_result":
+        scan_result = safe_context.get("scan_result") if isinstance(safe_context.get("scan_result"), dict) else {}
+        findings = _scan_result_findings(scan_result)
+        evidence_items = collect_evidence_from_scan_result(scan_result)
+        deduped = deduplicate_findings(findings, evidence_items=evidence_items)
+        summary = {
+            "evidence": summarize_evidence(evidence_items),
+            "findings_before_dedup": len(findings),
+            "unique_findings": len(deduped),
+            "dedup_summary": summarize_deduped_findings(deduped),
+            "priority_findings": deduped_findings_to_dicts(deduped[:5]),
+            "validation_status": "needs_manual_validation",
+        }
+        return AgentResponse(True, intent, "Local scan result analyzed with evidence collection and finding deduplication.", summary)
+
+    if intent in {"export_json", "import_json", "show_history"}:
         tool_response = route_tool_request(build_tool_request(intent, safe_context), safe_context)
         return AgentResponse(tool_response.success, intent, tool_response.message, tool_response.data, tool_response.error)
 
@@ -101,6 +118,18 @@ def analyze_user_request(
         return AgentResponse(True, intent, "Use the assessment project model to perform this assessment workflow step.")
 
     return AgentResponse(False, intent, "This request is recognized but not implemented in the local orchestrator yet.")
+
+
+def _scan_result_findings(scan_result: dict[str, Any]) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    for finding in (scan_result or {}).get("findings") or []:
+        if isinstance(finding, dict):
+            findings.append(dict(finding))
+        elif hasattr(finding, "to_dict"):
+            findings.append(finding.to_dict())
+        elif hasattr(finding, "__dict__"):
+            findings.append(dict(finding.__dict__))
+    return redact_sensitive_data(findings)
 
 
 def generate_manual_testing_guidance(findings: list[dict]) -> list[dict]:
