@@ -410,6 +410,34 @@ It does not perform:
 
 By default, network access is disabled unless explicitly enabled by execution policy and scope validation.
 
+## Real Passive Recon Modules
+
+AI Security Analyst includes safe-live passive recon modules built on top of the Safe Execution Engine.
+
+Current modules:
+
+- Live DNS Module
+- Live Security Headers Module
+- HTTP Fingerprint Module
+- Robots/Sitemap Passive Fetcher
+
+Safety boundaries:
+
+- authorized targets only
+- scope validation before every action
+- Safe HTTP Client / Safe DNS Resolver only
+- no external scanner execution
+- no exploit
+- no brute force
+- no fuzzing
+- no denial-of-service
+- no credential theft
+- no authentication bypass
+- no cookie/token/credential storage
+- commands_executed remains empty
+
+Unit tests use mocked network clients and do not perform real internet access.
+
 ## Scan Modes
 
 - `strict`: recon sangat rendah risiko, port scan dan crawler eksternal disabled.
