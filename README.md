@@ -213,6 +213,41 @@ Each module must:
 
 Current module interface stage includes only local/dummy modules and passive analyzers.
 
+## AI Red Team Copilot Layer
+
+AI Security Analyst includes an agent orchestrator that helps authorized red team and pentest teams:
+
+- create assessment context
+- enforce authorized scope
+- classify user intent
+- reject unsafe requests
+- run safe dummy analysis
+- analyze potential findings
+- generate manual testing guidance
+- prepare report workflows
+
+The agent does not perform exploitation, brute force, denial-of-service, credential theft, authentication bypass, or external scanner execution.
+
+All findings remain potential findings until manually validated by a human pentester.
+
+## Assessment Project Model
+
+Each assessment includes:
+
+- assessment ID
+- project name
+- owner
+- operator
+- authorization note
+- allowed domains
+- allowed IPs
+- denied patterns
+- environment
+- scan mode
+- status
+
+A scan action should only run when the assessment is approved and the target is in scope.
+
 ## Scan Modes
 
 - `strict`: recon sangat rendah risiko, port scan dan crawler eksternal disabled.
