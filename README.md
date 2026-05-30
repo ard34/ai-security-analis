@@ -438,6 +438,33 @@ Safety boundaries:
 
 Unit tests use mocked network clients and do not perform real internet access.
 
+## Safe Live Pipeline Orchestration
+
+AI Security Analyst includes a Safe Live Pipeline for controlled passive reconnaissance against authorized targets.
+
+The live pipeline is disabled by default.
+
+It requires:
+
+- an approved assessment
+- explicit `safe_live=True`
+- explicit `allow_network=True`
+- in-scope target
+- safe execution policy
+- enabled module allowlist
+- mocked network in unit tests
+- audit trail
+- no external scanner execution
+
+Safe-live modules may include:
+
+- Live DNS Module
+- Live Security Headers Module
+- HTTP Fingerprint Module
+- Robots/Sitemap Passive Fetcher
+
+The pipeline does not perform exploitation, brute force, fuzzing, denial-of-service, credential theft, authentication bypass, or external scanner execution.
+
 ## Scan Modes
 
 - `strict`: recon sangat rendah risiko, port scan dan crawler eksternal disabled.
