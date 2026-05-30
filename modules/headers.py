@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping
+from typing import Any, Mapping
 
 from core.models import Finding
+from core.modules import BaseReconModule, ModuleContext, ModuleResult
 
 
 MODULE_NAME = "security_headers"
@@ -130,3 +131,39 @@ def analyze_security_headers(
             findings.append(_missing_header_finding(target, asset, endpoint, rule))
 
     return findings
+
+
+class SecurityHeadersModule(BaseReconModule):
+    name = MODULE_NAME
+    description = "Analyzes provided HTTP response headers without making network requests."
+    required_policy_flags = ()
+
+    def run(self, context: ModuleContext) -> ModuleResult:
+        headers = context.metadata.get("headers", {})
+        if not isinstance(headers, Mapping):
+            headers = {}
+        is_https = bool(context.metadata.get("is_https", True))
+        asset = str(context.metadata.get("asset") or f"https://{context.normalized_target}")
+        endpoint = str(context.metadata.get("endpoint") or "/")
+        findings = analyze_security_headers(
+            target=context.normalized_target,
+            asset=asset,
+            headers=headers,
+            is_https=is_https,
+            endpoint=endpoint,
+        )
+        return ModuleResult(
+            module_name=self.name,
+            status="success",
+            findings=[finding.to_dict() for finding in findings],
+            evidence=[_finding_evidence(finding) for finding in findings],
+        )
+
+
+def _finding_evidence(finding: Finding) -> dict[str, Any]:
+    return {
+        "module": finding.module,
+        "title": finding.title,
+        "evidence": finding.evidence,
+        "source": finding.source,
+    }

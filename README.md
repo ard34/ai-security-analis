@@ -197,6 +197,22 @@ Sensitive values such as passwords, tokens, API keys, cookies, authorization hea
 
 The audit trail is local-only and does not send data to any remote service.
 
+## Safe Module Interface
+
+AI Security Analyst uses a safe module interface for all future reconnaissance components.
+
+Each module must:
+
+- receive a `ModuleContext`
+- return a `ModuleResult`
+- respect scan policy flags
+- avoid network access unless explicitly implemented in a future authorized module
+- avoid external command execution unless explicitly implemented with strict guardrails in a future stage
+- return potential findings only
+- avoid secrets in metadata, errors, evidence, or logs
+
+Current module interface stage includes only local/dummy modules and passive analyzers.
+
 ## Scan Modes
 
 - `strict`: recon sangat rendah risiko, port scan dan crawler eksternal disabled.

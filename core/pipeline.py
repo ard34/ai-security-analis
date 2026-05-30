@@ -4,9 +4,12 @@ from datetime import datetime, timezone
 from typing import Any
 
 from core.logging import audit_event_to_dict, create_audit_event
+from core.models import Finding
+from core.modules import ModuleContext, merge_module_results, module_result_to_dict, run_module_safely
 from core.policies import get_scan_policy
 from core.scope import validate_scope
-from modules.headers import analyze_security_headers
+from modules.dummy_module import DummyPassiveModule
+from modules.headers import SecurityHeadersModule
 
 
 def _utc_now() -> str:
@@ -50,6 +53,23 @@ def _dummy_headers() -> dict[str, str]:
         "Server": "dummy",
         "Content-Type": "text/html",
     }
+
+
+def _finding_from_dict(payload: dict[str, Any], target: str, asset: str, endpoint: str) -> Finding:
+    return Finding(
+        target=str(payload.get("target") or target),
+        asset=str(payload.get("asset") or asset),
+        endpoint=str(payload.get("endpoint") or endpoint),
+        module=str(payload.get("module") or ""),
+        finding_type=str(payload.get("finding_type") or "informational"),
+        title=str(payload.get("title") or ""),
+        severity=str(payload.get("severity") or "info"),
+        confidence=str(payload.get("confidence") or "low"),
+        evidence=str(payload.get("evidence") or ""),
+        recommendation=str(payload.get("recommendation") or ""),
+        source=str(payload.get("source") or "module_interface"),
+        metadata=payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {},
+    )
 
 
 def run_dummy_pipeline(
@@ -130,15 +150,28 @@ def run_dummy_pipeline(
     normalized_target = scope_result.normalized_target
     asset = f"https://{normalized_target}"
     endpoint = "/"
+    module_context = ModuleContext(
+        scan_id=scan_id,
+        target=target,
+        normalized_target=normalized_target,
+        allowed_domains=allowed_domains,
+        allowed_ips=allowed_ips or [],
+        scan_mode=scan_mode,
+        policy=policy,
+        metadata={"headers": _dummy_headers(), "is_https": True, "asset": asset, "endpoint": endpoint},
+    )
+    module_results = [
+        run_module_safely(DummyPassiveModule(), module_context),
+        run_module_safely(SecurityHeadersModule(), module_context),
+    ]
+    merged_modules = merge_module_results(module_results)
     assets = [{"url": asset, "asset_type": "web", "source": "dummy_pipeline"}]
     endpoints = [{"url": f"{asset}{endpoint}", "method": "GET", "path": endpoint, "source": "dummy_pipeline"}]
-    findings = analyze_security_headers(
-        target=normalized_target,
-        asset=asset,
-        headers=_dummy_headers(),
-        is_https=True,
-        endpoint=endpoint,
-    )
+    findings = [
+        _finding_from_dict(finding, normalized_target, asset, endpoint)
+        for finding in merged_modules["findings"]
+        if finding.get("module") == "security_headers"
+    ]
     ended_at = _utc_now()
     audit_events.append(
         audit_event_to_dict(
@@ -151,9 +184,9 @@ def run_dummy_pipeline(
                 source="pipeline",
                 metadata={
                     "scan_mode": scan_mode,
-                    "modules_enabled": ["security_headers"],
+                    "modules_enabled": merged_modules["modules"],
                     "findings_generated": len(findings),
-                    "commands_executed": [],
+                    "commands_executed": merged_modules["commands_executed"],
                 },
             )
         )
@@ -164,6 +197,7 @@ def run_dummy_pipeline(
         scan_mode=scan_mode,
         modules_enabled=["security_headers"],
         findings_generated=len(findings),
+        errors=merged_modules["errors"],
     )
     return {
         "scan_id": scan_id,
@@ -176,6 +210,8 @@ def run_dummy_pipeline(
         "findings": findings,
         "audit_log": audit_log,
         "audit_events": audit_events,
+        "module_results": [module_result_to_dict(result) for result in module_results],
+        "module_summary": merged_modules,
         "started_at": started_at,
         "ended_at": ended_at,
         "status": "success",
