@@ -32,6 +32,7 @@ Use AI Security Analyst for authorized-only internal and pre-production assessme
 - Stop if scope is uncertain.
 - Stop if authorization is unclear.
 - Stop if unexpected network behavior occurs.
+- During internal beta pilot, record stop condition details in the feedback template.
 
 ## Prohibited Operator Behavior
 

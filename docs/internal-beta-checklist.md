@@ -10,3 +10,5 @@
 - Review evidence for relevance and confirm no sensitive values are present.
 - Confirm every finding remains a potential finding until manual validation is complete.
 - Review `docs/safety-review.md`, `docs/known-limitations.md`, and release notes before RC sign-off.
+- Use `docs/internal-beta-pilot-plan.md` for controlled pilot runs.
+- Capture pilot feedback with `docs/internal-beta-feedback-template.md`.
