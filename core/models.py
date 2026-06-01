@@ -1,119 +1,130 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-
-VALID_SEVERITIES = {"info", "low", "medium", "high", "critical"}
-VALID_CONFIDENCES = {"low", "medium", "high"}
+from core.risk import normalize_severity
 
 
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
-def _normalize_choice(value: str, allowed: set[str], field_name: str) -> str:
-    normalized = str(value or "").strip().lower()
-    if normalized not in allowed:
-        raise ValueError(f"Invalid {field_name}: {value}")
-    return normalized
+def new_id(prefix: str) -> str:
+    return f"{prefix}_{uuid4().hex[:12]}"
 
 
-@dataclass(frozen=True)
-class Target:
-    raw_input: str
-    normalized_target: str
-    allowed_domains: list[str] = field(default_factory=list)
-    allowed_ips: list[str] = field(default_factory=list)
-
-
-@dataclass(frozen=True)
+@dataclass(slots=True)
 class Asset:
     value: str
-    asset_type: str
-    source: str
+    type: str = "unknown"
+    id: str = field(default_factory=lambda: new_id("asset"))
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
-@dataclass(frozen=True)
+@dataclass(slots=True)
 class Endpoint:
-    url: str
+    path: str
     method: str = "GET"
-    path: str = "/"
-    source: str = "unknown"
-
-
-@dataclass
-class Finding:
-    target: str
-    asset: str
-    endpoint: str
-    module: str
-    finding_type: str
-    title: str
-    severity: str
-    confidence: str
-    evidence: str
-    recommendation: str
-    source: str
-    is_potential: bool = True
+    id: str = field(default_factory=lambda: new_id("endpoint"))
+    url: str | None = None
+    source: str = "local"
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        self.severity = _normalize_choice(self.severity, VALID_SEVERITIES, "severity")
-        self.confidence = _normalize_choice(self.confidence, VALID_CONFIDENCES, "confidence")
+        self.method = self.method.upper()
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class Evidence:
+    source: str
+    content: str
+    id: str = field(default_factory=lambda: new_id("evidence"))
+    metadata: dict[str, Any] = field(default_factory=dict)
+    collected_at: str = field(default_factory=utc_now)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class Finding:
+    title: str
+    severity: str = "info"
+    description: str = ""
+    id: str = field(default_factory=lambda: new_id("finding"))
+    asset_id: str | None = None
+    endpoint_id: str | None = None
+    evidence_ids: list[str] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
+    is_potential: bool = True
+    confidence: str = "low"
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        self.severity = normalize_severity(self.severity)
         self.is_potential = True
 
     def to_dict(self) -> dict[str, Any]:
-        return {
-            "target": self.target,
-            "asset": self.asset,
-            "endpoint": self.endpoint,
-            "module": self.module,
-            "finding_type": self.finding_type,
-            "title": self.title,
-            "severity": self.severity,
-            "confidence": self.confidence,
-            "evidence": self.evidence,
-            "recommendation": self.recommendation,
-            "source": self.source,
-            "is_potential": self.is_potential,
-            "metadata": self.metadata,
-        }
+        data = asdict(self)
+        data["is_potential"] = True
+        return data
 
 
-@dataclass(frozen=True)
-class ToolResult:
-    tool_name: str
-    status: str
-    result_count: int = 0
-    commands_executed: list[list[str]] = field(default_factory=list)
-    errors: list[str] = field(default_factory=list)
-
-
-@dataclass
-class ScanSession:
-    target: Target
-    scan_mode: str
-    status: str = "pending"
-    allowed_scope: dict[str, Any] = field(default_factory=dict)
+@dataclass(slots=True)
+class ScanResult:
+    target: str
+    workflow: str
+    id: str = field(default_factory=lambda: new_id("scan"))
     assets: list[Asset] = field(default_factory=list)
     endpoints: list[Endpoint] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
-    tool_results: list[ToolResult] = field(default_factory=list)
-    audit_log: dict[str, Any] = field(default_factory=dict)
-    scan_id: str = field(default_factory=lambda: str(uuid4()))
-    started_at: str = field(default_factory=_utc_now)
-    ended_at: str | None = None
+    evidence: list[Evidence] = field(default_factory=list)
+    recommendations: list[str] = field(default_factory=list)
+    started_at: str = field(default_factory=utc_now)
+    completed_at: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    audit_events: list[dict[str, Any]] = field(default_factory=list)
 
-    def finish(self) -> None:
-        self.ended_at = _utc_now()
+    def complete(self) -> "ScanResult":
+        self.completed_at = utc_now()
+        return self
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "target": self.target,
+            "workflow": self.workflow,
+            "assets": [item.to_dict() for item in self.assets],
+            "endpoints": [item.to_dict() for item in self.endpoints],
+            "findings": [item.to_dict() for item in self.findings],
+            "evidence": [item.to_dict() for item in self.evidence],
+            "recommendations": list(self.recommendations),
+            "started_at": self.started_at,
+            "completed_at": self.completed_at,
+            "metadata": dict(self.metadata),
+            "audit_events": list(self.audit_events),
+        }
 
-@dataclass(frozen=True)
-class ReportMetadata:
-    project_name: str
-    scan_id: str
-    generated_at: str = field(default_factory=_utc_now)
-    disclaimer: str = "Findings are potential findings and require manual validation."
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ScanResult":
+        result = cls(target=data["target"], workflow=data["workflow"], id=data.get("id", new_id("scan")))
+        result.assets = [Asset(**item) for item in data.get("assets", [])]
+        result.endpoints = [Endpoint(**item) for item in data.get("endpoints", [])]
+        result.findings = [Finding(**item) for item in data.get("findings", [])]
+        result.evidence = [Evidence(**item) for item in data.get("evidence", [])]
+        result.recommendations = list(data.get("recommendations", []))
+        result.started_at = data.get("started_at", result.started_at)
+        result.completed_at = data.get("completed_at")
+        result.metadata = dict(data.get("metadata", {}))
+        result.audit_events = list(data.get("audit_events", []))
+        return result
+

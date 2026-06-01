@@ -1,491 +1,93 @@
-# AI Security Analyst
+# AI Security Analyst / AI Red Team Copilot
 
-AI Security Analyst adalah platform untuk authorized black-box web/API reconnaissance yang aman dan semi-otomatis. Project ini membantu analyst melakukan reconnaissance, asset discovery, passive security analysis, attack surface mapping, potential finding analysis, dashboard visualization, dan reporting.
+AI Security Analyst is a safe, authorized-only assistant for internal pre-production web and API security assessment.
 
-This tool is intended only for authorized security testing, defensive assessment, lab environments, and security reporting. It does not perform active exploitation, brute force, denial-of-service, credential theft, or unauthorized access.
+It has two workflows:
+
+1. **Type 1: Source Code / Folder Project Assessment**
+   Local white-box review of a folder. It maps project structure, route/API hints, auth/config hints, security smells, evidence, potential findings, and manual validation recommendations.
+
+2. **Type 2: Domain / Website Target Assessment**
+   Guarded safe-live passive recon for approved in-scope domains only. It performs DNS A/AAAA lookup, safe HTTP GET/HEAD requests, security header review, robots.txt, sitemap.xml, and light HTTP fingerprinting.
 
 ## Safety Boundaries
 
-- Tidak melakukan exploit aktif.
-- Tidak melakukan brute force.
-- Tidak melakukan denial-of-service.
-- Tidak melakukan credential theft.
-- Tidak melakukan bypass authentication.
-- Tidak melakukan persistence.
-- Tidak membaca source code, server, database, atau internal log target.
-- Tidak menjalankan payload destruktif.
-- Semua temuan adalah potential finding sampai divalidasi manual.
-- Semua scanning wajib berada dalam authorized scope.
+- Authorized use only.
+- Every finding is a potential finding until manually validated.
+- No exploit generation or autonomous exploitation.
+- No brute force, DoS, aggressive crawling, fuzzing, scanner orchestration, credential theft, or auth bypass.
+- Type 1 has no network behavior and no subprocess execution.
+- Type 2 defaults to no network and requires approval, scope validation, `--allow-network`, `--confirm-safe-live`, budget, timeout, rate limit, audit logging, and safe-live policy gates.
+- Sensitive values such as Authorization, cookies, tokens, passwords, API keys, and secrets are redacted from logs, exports, and reports.
 
-## MVP Scope
-
-Alur target MVP:
-
-```text
-Input target
--> Scope validation
--> Subdomain discovery
--> DNS resolution
--> Live host check
--> Port/service detection
--> Web technology fingerprinting
--> Security headers review
--> WAF/CDN detection
--> Endpoint crawling with Katana
--> OWASP ZAP spider and passive scan
--> Nuclei safe templates
--> Burp/HAR import
--> Normalize findings
--> Attack surface mapping
--> Streamlit dashboard
--> HTML/PDF report
-```
-
-Tahap fondasi saat ini hanya berisi guardrail inti dan unit test. Dashboard dan pipeline awal harus memakai dummy pipeline sampai guardrail stabil.
-
-## Current Foundation
-
-- `core/scope.py`: target normalization dan scope validation tanpa network request.
-- `core/policies.py`: scan mode strict/safe/standard dengan exploit, brute force, dan active ZAP selalu disabled.
-- `core/models.py`: dataclass standar untuk target, asset, endpoint, finding, session, tool result, dan report metadata.
-- `core/risk.py`: severity/confidence normalization dan passive risk scoring.
-- `tests/test_scope.py`: coverage scope validation.
-- `tests/test_policies.py`: coverage safety policy.
-
-## Installation
+## Install
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
+. .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Running Tests
+## Test
 
 ```bash
 pytest -q
 ```
 
-Optional coverage:
-
-```bash
-pytest --cov=.
-```
-
-## Running Streamlit Dashboard
-
-Dashboard utama:
-
-```bash
-streamlit run ui/app.py
-```
-
-Untuk tahap awal, dashboard hanya boleh menjalankan dummy pipeline dan tidak boleh memanggil Nmap, Katana, ZAP, Nuclei, atau tool eksternal lain.
-
-## Configuration
-
-Project menggunakan environment variables dengan prefix:
-
-```text
-AI_SECURITY_ANALYST_
-```
-
-File `.env.example` disediakan sebagai dokumentasi konfigurasi lokal:
-
-```bash
-cp .env.example .env
-```
-
-Tahap ini belum otomatis membaca file `.env`; konfigurasi dibaca dari environment variables proses Python. Contoh override:
-
-```bash
-AI_SECURITY_ANALYST_DEFAULT_SCAN_MODE=strict python cli.py scan --target example.com --allowed-domain example.com
-```
-
-Default path lokal:
-
-```text
-data/
-reports/
-exports/
-data/ai_security_analyst.sqlite3
-```
-
-Konfigurasi bersifat local-only. Project tidak menggunakan remote database, external scanner, exploitation module, brute force, denial-of-service, atau active testing pada fase saat ini.
-
 ## CLI Usage
 
-CLI lokal saat ini hanya menjalankan safe dummy pipeline dan komponen lokal yang sudah ada. CLI tidak menjalankan external scanner, exploitation, brute force, denial-of-service, credential theft, atau active testing.
-
-Run dummy scan dan simpan ke SQLite:
+Type 1 local source assessment:
 
 ```bash
-python cli.py scan --target example.com --allowed-domain example.com --scan-mode safe --save
+python cli.py scan-source --path /path/to/project --save-result
+python cli.py report-source --path /path/to/project --html-out reports/source.html --pdf-out reports/source.pdf
 ```
 
-Lihat history:
+JSON and history:
 
 ```bash
 python cli.py history
+python cli.py show --scan-id scan_x
+python cli.py export-json --scan-id scan_x --out exports/scan.json
+python cli.py import-json --path exports/scan.json
 ```
 
-Tampilkan scan result:
+Type 2 gated safe-live assessment:
 
 ```bash
-python cli.py show --scan-id <scan_id>
-```
-
-Export report HTML:
-
-```bash
-python cli.py export-html --scan-id <scan_id> --output reports/report.html
-```
-
-Export report PDF:
-
-```bash
-python cli.py export-pdf --scan-id <scan_id> --output reports/report.pdf
-```
-
-Export scan result JSON:
-
-```bash
-python cli.py export-json --scan-id <scan_id> --output exports/scan.json
-```
-
-Import scan result JSON:
-
-```bash
-python cli.py import-json --input exports/scan.json --save
-```
-
-## Logging and Audit Trail
-
-AI Security Analyst writes local audit events in JSON Lines format.
-
-Default audit log path:
-
-```bash
-logs/audit.jsonl
-```
-
-Example CLI usage:
-
-```bash
-python cli.py scan \
+python cli.py create-assessment --name preprod-example --target example.com --out assessment.json
+python cli.py approve-assessment --assessment-json assessment.json
+python cli.py scan-domain \
   --target example.com \
-  --allowed-domain example.com \
-  --save \
+  --assessment-json assessment.json \
+  --allow-network \
+  --confirm-safe-live \
   --audit-log-path logs/audit.jsonl
 ```
 
-Audit events may include:
+`scan-domain` rejects unapproved assessments, out-of-scope targets, missing `--allow-network`, missing `--confirm-safe-live`, and missing audit logging.
 
-* scan_started
-* scan_completed
-* scan_rejected
-* report_exported
-* json_imported
-* json_exported
-* history_saved
-* cli_action
-* dashboard_action
-* error
+## Dashboard
 
-Sensitive values such as passwords, tokens, API keys, cookies, authorization headers, sessions, and credentials are redacted before being written.
+```bash
+streamlit run app/dashboard.py
+```
 
-The audit trail is local-only and does not send data to any remote service.
+The dashboard provides a mode selector for Type 1 source folder and Type 2 domain workflows. Type 2 controls stay gated behind approval and explicit confirmation.
 
-## Safe Module Interface
+## Reports
 
-AI Security Analyst uses a safe module interface for all future reconnaissance components.
+Reports can be exported as HTML, PDF, or JSON. HTML output escapes user-controlled content. PDF uses `reportlab` when available and falls back to a safe byte representation of the HTML report.
 
-Each module must:
+## Project Layout
 
-- receive a `ModuleContext`
-- return a `ModuleResult`
-- respect scan policy flags
-- avoid network access unless explicitly implemented in a future authorized module
-- avoid external command execution unless explicitly implemented with strict guardrails in a future stage
-- return potential findings only
-- avoid secrets in metadata, errors, evidence, or logs
+```text
+app/            Streamlit dashboard entrypoint
+ui/             UI helper functions and local chat routing
+core/           assessment models, safety policies, scope, pipelines
+modules/        passive source and live-safe modules
+reporting/      HTML/PDF reporting
+storage/        SQLite and JSON persistence
+tests/          safety and behavior tests
+```
 
-Current module interface stage includes only local/dummy modules and passive analyzers.
-
-## AI Red Team Copilot Layer
-
-AI Security Analyst includes an agent orchestrator that helps authorized red team and pentest teams:
-
-- create assessment context
-- enforce authorized scope
-- classify user intent
-- reject unsafe requests
-- run safe dummy analysis
-- analyze potential findings
-- generate manual testing guidance
-- prepare report workflows
-
-The agent does not perform exploitation, brute force, denial-of-service, credential theft, authentication bypass, or external scanner execution.
-
-All findings remain potential findings until manually validated by a human pentester.
-
-## Assessment Project Model
-
-Each assessment includes:
-
-- assessment ID
-- project name
-- owner
-- operator
-- authorization note
-- allowed domains
-- allowed IPs
-- denied patterns
-- environment
-- scan mode
-- status
-
-A scan action should only run when the assessment is approved and the target is in scope.
-
-## AI Red Team Copilot Chat UI
-
-The dashboard includes a local chat-style interface for the AI Red Team Copilot.
-
-The chat UI can:
-
-- explain available capabilities
-- classify user intent
-- reject unsafe requests
-- use the active assessment context
-- analyze local scan results
-- generate safe manual testing guidance
-- help prepare report workflows
-
-Current limitations:
-
-- no external LLM API calls
-- no live scanning
-- no external scanner execution
-- no exploitation
-- no brute force
-- no denial-of-service
-- no credential theft
-- no authentication bypass
-
-All outputs are intended to support authorized human pentesters. Findings remain potential until manually validated.
-
-## Evidence Store and Finding Deduplication
-
-AI Security Analyst stores normalized local evidence for each assessment and scan result.
-
-Evidence may include:
-
-- HTTP header observations
-- DNS records
-- endpoints
-- technology observations
-- finding evidence
-- audit events
-- manual notes
-- imported artifacts
-
-Sensitive values such as passwords, tokens, API keys, cookies, authorization headers, credentials, sessions, and private keys are redacted before evidence is stored.
-
-Findings are deduplicated using deterministic fingerprints based on:
-
-- target
-- asset
-- endpoint
-- module
-- finding type
-- title
-
-Deduplicated findings remain potential findings until manually validated by a human pentester.
-
-## Manual Testing Recommendation Engine
-
-AI Security Analyst can convert findings and evidence into safe manual testing recommendations for authorized pentesters.
-
-The recommendation engine helps prioritize:
-
-- security headers review
-- authentication controls
-- authorization and access control checks
-- session management review
-- API security review
-- information disclosure review
-- transport security review
-- DNS security review
-- rate limiting review
-- file upload review
-- business logic review
-
-All recommendations are designed for non-destructive manual validation by authorized testers.
-
-The engine does not generate exploit payloads, brute force instructions, denial-of-service steps, credential theft instructions, authentication bypass instructions, or scanner commands.
-
-Every recommendation defaults to:
-
-`needs_manual_validation`
-
-## Safe Execution Engine
-
-AI Security Analyst includes a Safe Execution Engine that acts as a mandatory guardrail before any future live reconnaissance action.
-
-The execution engine enforces:
-
-- authorized scope validation
-- scan budget
-- request budget
-- timeout configuration
-- rate limiting configuration
-- concurrency limits
-- error limits
-- kill switch
-- dangerous action blocking
-- audit event generation
-- metadata redaction
-
-By default, network actions are disabled.
-
-Blocked by default:
-
-- live HTTP requests
-- DNS lookups
-- external scanner execution
-- exploit attempts
-- brute force
-- denial-of-service
-- credential theft
-- active ZAP scan
-- aggressive fuzzing
-
-The current stage does not perform live scanning. It only prepares safety controls for future safe-live modules.
-
-## Safe HTTP Client and Safe DNS Resolver
-
-AI Security Analyst includes guarded live-recon primitives for future safe-live modules.
-
-### Safe HTTP Client
-
-The Safe HTTP Client supports only:
-
-- GET
-- HEAD
-
-It enforces:
-
-- authorized scope validation
-- execution engine decision
-- timeout configuration
-- sensitive header filtering
-- redirect scope validation
-- body size limit
-- audit event generation
-- no external command execution
-
-It does not perform:
-
-- exploitation
-- brute force
-- fuzzing
-- denial-of-service
-- credential theft
-- authentication bypass
-- unsafe HTTP methods
-
-### Safe DNS Resolver
-
-The Safe DNS Resolver supports explicit authorized DNS queries only.
-
-It does not perform:
-
-- subdomain brute force
-- zone transfer
-- DNS enumeration
-- external command execution
-- `dig`
-- `nslookup`
-
-By default, network access is disabled unless explicitly enabled by execution policy and scope validation.
-
-## Real Passive Recon Modules
-
-AI Security Analyst includes safe-live passive recon modules built on top of the Safe Execution Engine.
-
-Current modules:
-
-- Live DNS Module
-- Live Security Headers Module
-- HTTP Fingerprint Module
-- Robots/Sitemap Passive Fetcher
-
-Safety boundaries:
-
-- authorized targets only
-- scope validation before every action
-- Safe HTTP Client / Safe DNS Resolver only
-- no external scanner execution
-- no exploit
-- no brute force
-- no fuzzing
-- no denial-of-service
-- no credential theft
-- no authentication bypass
-- no cookie/token/credential storage
-- commands_executed remains empty
-
-Unit tests use mocked network clients and do not perform real internet access.
-
-## Safe Live Pipeline Orchestration
-
-AI Security Analyst includes a Safe Live Pipeline for controlled passive reconnaissance against authorized targets.
-
-The live pipeline is disabled by default.
-
-It requires:
-
-- an approved assessment
-- explicit `safe_live=True`
-- explicit `allow_network=True`
-- in-scope target
-- safe execution policy
-- enabled module allowlist
-- mocked network in unit tests
-- audit trail
-- no external scanner execution
-
-Safe-live modules may include:
-
-- Live DNS Module
-- Live Security Headers Module
-- HTTP Fingerprint Module
-- Robots/Sitemap Passive Fetcher
-
-The pipeline does not perform exploitation, brute force, fuzzing, denial-of-service, credential theft, authentication bypass, or external scanner execution.
-
-## Scan Modes
-
-- `strict`: recon sangat rendah risiko, port scan dan crawler eksternal disabled.
-- `safe`: safe reconnaissance dengan passive ZAP dan safe templates.
-- `standard`: mode aman yang lebih lengkap, tetap tanpa exploit/bruteforce/active scan.
-
-Capability berikut selalu dilarang:
-
-- `allow_zap_active`
-- `allow_bruteforce`
-- `allow_exploit`
-
-## Reporting Output
-
-Report HTML/PDF akan memuat:
-
-- Project name
-- Target dan scope
-- Scan mode dan scan time
-- Executive summary
-- Attack surface summary
-- Findings table
-- Evidence dan recommendation
-- Disclaimer bahwa findings adalah potential findings dan perlu validasi manual

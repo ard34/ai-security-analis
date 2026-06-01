@@ -1,85 +1,105 @@
 from __future__ import annotations
 
-from copy import deepcopy
+import re
+from dataclasses import dataclass
 from typing import Any
 
-
-DANGEROUS_CAPABILITIES = {"allow_zap_active", "allow_bruteforce", "allow_exploit"}
-
-SCAN_MODES: dict[str, dict[str, Any]] = {
-    "strict": {
-        "allow_subdomain_enum": True,
-        "allow_dns_lookup": True,
-        "allow_live_check": True,
-        "allow_port_scan": False,
-        "allow_katana": False,
-        "allow_zap_passive": True,
-        "allow_zap_active": False,
-        "allow_nuclei_safe": False,
-        "allow_bruteforce": False,
-        "allow_exploit": False,
-        "rate_limit": "very_low",
-    },
-    "safe": {
-        "allow_subdomain_enum": True,
-        "allow_dns_lookup": True,
-        "allow_live_check": True,
-        "allow_port_scan": True,
-        "allow_katana": True,
-        "allow_zap_passive": True,
-        "allow_zap_active": False,
-        "allow_nuclei_safe": True,
-        "allow_bruteforce": False,
-        "allow_exploit": False,
-        "rate_limit": "low",
-    },
-    "standard": {
-        "allow_subdomain_enum": True,
-        "allow_dns_lookup": True,
-        "allow_live_check": True,
-        "allow_port_scan": True,
-        "allow_katana": True,
-        "allow_zap_passive": True,
-        "allow_zap_active": False,
-        "allow_nuclei_safe": True,
-        "allow_bruteforce": False,
-        "allow_exploit": False,
-        "rate_limit": "medium",
-    },
+SENSITIVE_KEYS = {
+    "authorization",
+    "cookie",
+    "set-cookie",
+    "token",
+    "access_token",
+    "refresh_token",
+    "api_key",
+    "apikey",
+    "password",
+    "secret",
 }
+SAFE_HTTP_METHODS = {"GET", "HEAD"}
+PROHIBITED_ACTIONS = (
+    "exploit",
+    "brute force",
+    "dos",
+    "fuzz",
+    "credential theft",
+    "auth bypass",
+    "active scanner",
+)
+SECRET_PATTERNS = [
+    re.compile(r"(?i)(authorization:\s*bearer\s+)[A-Za-z0-9._~+/=-]+"),
+    re.compile(r"(?i)((api[_-]?key|token|secret|password)\s*[:=]\s*)[^\s,;]+"),
+]
 
 
-class PolicyError(ValueError):
+class PolicyViolation(ValueError):
     pass
 
 
-def get_scan_policy(mode: str) -> dict[str, Any]:
-    key = str(mode or "").strip().lower()
-    if key not in SCAN_MODES:
-        raise PolicyError(f"Unknown scan mode: {mode}")
-    policy = deepcopy(SCAN_MODES[key])
-    for capability in DANGEROUS_CAPABILITIES:
-        policy[capability] = False
-    return policy
+@dataclass(slots=True)
+class DomainRunPolicy:
+    safe_live: bool = False
+    allow_network: bool = False
+    confirm_safe_live: bool = False
+    timeout_seconds: float = 5.0
+    rate_limit_per_second: float = 1.0
+    scan_budget: int = 8
+    audit_log_path: str | None = None
 
 
-def validate_requested_policy(mode: str, requested_overrides: dict[str, Any] | None = None) -> dict[str, Any]:
-    policy = get_scan_policy(mode)
-    for key, value in (requested_overrides or {}).items():
-        if key in DANGEROUS_CAPABILITIES and bool(value):
-            raise PolicyError(f"Capability is prohibited and cannot be enabled: {key}")
-        if key in policy:
-            policy[key] = value
-    for capability in DANGEROUS_CAPABILITIES:
-        if policy.get(capability):
-            raise PolicyError(f"Unsafe policy attempted to enable: {capability}")
-        policy[capability] = False
-    return policy
+def redact_value(key: str, value: Any) -> Any:
+    if key.lower() in SENSITIVE_KEYS:
+        return "[REDACTED]"
+    if isinstance(value, str):
+        redacted = value
+        for pattern in SECRET_PATTERNS:
+            redacted = pattern.sub(r"\1[REDACTED]", redacted)
+        return redacted
+    if isinstance(value, dict):
+        return redact_mapping(value)
+    if isinstance(value, list):
+        return [redact_value(key, item) for item in value]
+    return value
 
 
-def assert_tool_allowed(policy: dict[str, Any], capability: str) -> None:
-    if capability in DANGEROUS_CAPABILITIES:
-        raise PolicyError(f"Capability is prohibited: {capability}")
-    if not bool(policy.get(capability, False)):
-        raise PolicyError(f"Capability is not allowed by current scan policy: {capability}")
+def redact_mapping(data: dict[str, Any]) -> dict[str, Any]:
+    return {key: redact_value(key, value) for key, value in data.items()}
+
+
+def sanitize_headers(headers: dict[str, str]) -> dict[str, str]:
+    return {
+        key: value
+        for key, value in redact_mapping(headers).items()
+        if key.lower() not in {"authorization", "cookie", "set-cookie"}
+    }
+
+
+def require_type1_safe() -> None:
+    return None
+
+
+def require_safe_http_method(method: str) -> str:
+    normalized = method.upper()
+    if normalized not in SAFE_HTTP_METHODS:
+        raise PolicyViolation("only safe HTTP GET/HEAD methods are allowed")
+    return normalized
+
+
+def require_domain_run_policy(policy: DomainRunPolicy, *, assessment_approved: bool) -> None:
+    if not assessment_approved:
+        raise PolicyViolation("assessment must be approved before live assessment")
+    if not policy.safe_live:
+        raise PolicyViolation("safe_live must be enabled")
+    if not policy.allow_network:
+        raise PolicyViolation("allow_network must be explicitly enabled")
+    if not policy.confirm_safe_live:
+        raise PolicyViolation("confirm_safe_live must be explicitly enabled")
+    if not policy.audit_log_path:
+        raise PolicyViolation("audit log path is required")
+    if policy.timeout_seconds <= 0 or policy.timeout_seconds > 30:
+        raise PolicyViolation("timeout must be between 0 and 30 seconds")
+    if policy.rate_limit_per_second <= 0 or policy.rate_limit_per_second > 5:
+        raise PolicyViolation("rate limit must be between 0 and 5 requests per second")
+    if policy.scan_budget <= 0 or policy.scan_budget > 50:
+        raise PolicyViolation("scan budget must be between 1 and 50")
 

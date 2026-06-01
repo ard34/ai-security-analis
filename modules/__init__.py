@@ -1,2 +1,1 @@
-"""Scanner and analysis modules."""
 
