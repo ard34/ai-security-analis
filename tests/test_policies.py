@@ -1,6 +1,12 @@
 import pytest
 
-from core.policies import DomainRunPolicy, PolicyViolation, require_domain_run_policy, require_safe_http_method, sanitize_headers
+from core.policies import (
+    DomainRunPolicy,
+    PolicyViolation,
+    require_domain_run_policy,
+    require_safe_http_method,
+    sanitize_headers,
+)
 
 
 def test_safe_methods_only():

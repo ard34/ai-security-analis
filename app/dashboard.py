@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from ui.app import (
-    can_enable_domain_mode,
-    can_export_dashboard_result,
     can_approve_assessment_from_ui,
     can_archive_assessment_from_ui,
-    can_run_safe_live_from_dashboard,
+    can_enable_domain_mode,
+    can_export_dashboard_result,
     can_run_domain_scan_for_assessment,
+    can_run_safe_live_from_dashboard,
     mode_options,
     render_streamlit,
     safe_live_gate_reasons,

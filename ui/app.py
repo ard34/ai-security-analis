@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import json
 import html
+import json
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -39,7 +39,12 @@ def load_dashboard_assessment_json(raw_json: str) -> tuple[Assessment | None, st
         assessment = Assessment.from_dict(data)
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         return None, None, f"invalid assessment JSON: {exc}"
-    note = assessment.authorization_note or data.get("authorization_note") or data.get("authorization") or data.get("note")
+    note = (
+        assessment.authorization_note
+        or data.get("authorization_note")
+        or data.get("authorization")
+        or data.get("note")
+    )
     return assessment, str(note) if note else None, None
 
 
@@ -122,7 +127,9 @@ def summarize_assessment_project(assessment: Assessment | None) -> dict[str, Any
     )
 
 
-def filter_scan_history_by_assessment(history: list[dict[str, Any]], assessment: Assessment | None) -> list[dict[str, Any]]:
+def filter_scan_history_by_assessment(
+    history: list[dict[str, Any]], assessment: Assessment | None
+) -> list[dict[str, Any]]:
     if not assessment:
         return []
     filtered: list[dict[str, Any]] = []
@@ -155,7 +162,9 @@ def summarize_assessment_status(
         "status": assessment.status if assessment else "missing",
         "allowed_scope": list(assessment.allowed_targets) if assessment else [],
         "target_in_scope": False,
-        "authorization_note": html.escape(str(redact_value("authorization_note", authorization_note or "")), quote=True),
+        "authorization_note": html.escape(
+            str(redact_value("authorization_note", authorization_note or "")), quote=True
+        ),
     }
     if not assessment:
         status["reason"] = "assessment JSON is not loaded"

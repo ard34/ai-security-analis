@@ -25,13 +25,13 @@ class Assessment:
     def scope(self) -> Scope:
         return Scope([*self.allowed_targets, *self.allowed_ips])
 
-    def approve(self) -> "Assessment":
+    def approve(self) -> Assessment:
         self.approved = True
         self.status = "approved"
         self.approved_at = utc_now()
         return self
 
-    def archive(self) -> "Assessment":
+    def archive(self) -> Assessment:
         self.approved = False
         self.status = "archived"
         self.archived_at = utc_now()
@@ -41,14 +41,16 @@ class Assessment:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, object]) -> "Assessment":
+    def from_dict(cls, data: dict[str, object]) -> Assessment:
         return cls(
             name=str(data["name"]),
             allowed_targets=list(data["allowed_targets"]),  # type: ignore[arg-type]
             approved=bool(data.get("approved", False)),
             status=str(data.get("status") or ("approved" if data.get("approved", False) else "draft")),
             owner_operator=str(data.get("owner_operator") or data.get("owner") or ""),
-            authorization_note=str(data.get("authorization_note") or data.get("authorization") or data.get("note") or ""),
+            authorization_note=str(
+                data.get("authorization_note") or data.get("authorization") or data.get("note") or ""
+            ),
             environment=str(data.get("environment") or "pre-production"),
             allowed_ips=list(data.get("allowed_ips", [])),  # type: ignore[arg-type]
             created_at=str(data.get("created_at") or utc_now()),

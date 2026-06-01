@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -9,7 +9,7 @@ from core.risk import normalize_severity
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def new_id(prefix: str) -> str:
@@ -94,7 +94,7 @@ class ScanResult:
     metadata: dict[str, Any] = field(default_factory=dict)
     audit_events: list[dict[str, Any]] = field(default_factory=list)
 
-    def complete(self) -> "ScanResult":
+    def complete(self) -> ScanResult:
         self.completed_at = utc_now()
         return self
 
@@ -115,7 +115,7 @@ class ScanResult:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "ScanResult":
+    def from_dict(cls, data: dict[str, Any]) -> ScanResult:
         result = cls(target=data["target"], workflow=data["workflow"], id=data.get("id", new_id("scan")))
         result.assets = [Asset(**item) for item in data.get("assets", [])]
         result.endpoints = [Endpoint(**item) for item in data.get("endpoints", [])]

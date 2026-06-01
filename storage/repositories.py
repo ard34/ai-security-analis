@@ -27,6 +27,8 @@ class ScanRepository:
         return ScanResult.from_dict(json.loads(row["payload_json"]))
 
     def list(self) -> list[dict[str, str]]:
-        rows = self.connection.execute("SELECT id, workflow, target, created_at FROM scans ORDER BY created_at DESC").fetchall()
+        rows = self.connection.execute(
+            "SELECT id, workflow, target, created_at FROM scans ORDER BY created_at DESC"
+        ).fetchall()
         return [dict(row) for row in rows]
 

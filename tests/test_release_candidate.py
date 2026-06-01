@@ -5,7 +5,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SENSITIVE_PATTERNS = [
     re.compile(r"authorization\s*:\s*bearer", re.IGNORECASE),
@@ -72,7 +71,17 @@ def test_release_candidate_project_structure_exists():
 def test_gitignore_excludes_runtime_generated_paths():
     ignored = lower(".gitignore")
 
-    for item in ["data/*", "reports/*", "exports/*", "logs/*.jsonl", ".env", ".venv/", "venv/", "__pycache__/", ".pytest_cache/"]:
+    for item in [
+        "data/*",
+        "reports/*",
+        "exports/*",
+        "logs/*.jsonl",
+        ".env",
+        ".venv/",
+        "venv/",
+        "__pycache__/",
+        ".pytest_cache/",
+    ]:
         assert item in ignored
 
 

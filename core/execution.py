@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 from urllib.request import Request, urlopen
 
 from core.logging import AuditLogger
-from core.policies import DomainRunPolicy, PolicyViolation, require_domain_run_policy, require_safe_http_method, sanitize_headers
+from core.policies import (
+    DomainRunPolicy,
+    PolicyViolation,
+    require_domain_run_policy,
+    require_safe_http_method,
+    sanitize_headers,
+)
 
 
 @dataclass(slots=True)

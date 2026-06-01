@@ -5,7 +5,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SENSITIVE_PATTERNS = [
     re.compile(r"authorization:\s*bearer", re.IGNORECASE),

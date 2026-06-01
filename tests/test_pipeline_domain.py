@@ -11,8 +11,14 @@ def test_domain_pipeline_uses_gated_modules(monkeypatch, tmp_path):
             self.audit = audit
 
     monkeypatch.setattr("core.pipeline_domain.ExecutionEngine", FakeEngine)
-    monkeypatch.setattr("core.pipeline_domain.resolve_a_aaaa", lambda host, engine: {"A": ["93.184.216.34"], "AAAA": []})
-    monkeypatch.setattr("core.pipeline_domain.fetch_security_headers", lambda url, engine: {"headers": {"server": "x"}, "status": 200})
+    monkeypatch.setattr(
+        "core.pipeline_domain.resolve_a_aaaa",
+        lambda host, engine: {"A": ["93.184.216.34"], "AAAA": []},
+    )
+    monkeypatch.setattr(
+        "core.pipeline_domain.fetch_security_headers",
+        lambda url, engine: {"headers": {"server": "x"}, "status": 200},
+    )
     monkeypatch.setattr("core.pipeline_domain.fingerprint_http", lambda url, engine: {"status": 200})
     monkeypatch.setattr("core.pipeline_domain.fetch_robots_and_sitemap", lambda url, engine: {})
     assessment = Assessment("a", ["example.com"]).approve()
