@@ -78,6 +78,7 @@ Run `pip install -r requirements.txt`, then `pytest -q`. Review `.env.example` f
 
 - Run `pytest -q`.
 - Run safety static tests.
+- Complete `docs/internal-rc-review.md`.
 - Confirm Type 1 source scan works local-only.
 - Confirm Type 2 rejects unsafe/default execution.
 - Confirm dashboard does not bypass gates.

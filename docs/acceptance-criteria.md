@@ -19,4 +19,5 @@
 - Operator SOP exists.
 - Release notes exist.
 - Known limitations exist.
+- Internal RC review checklist exists.
 - All sample findings have `is_potential=True`.
