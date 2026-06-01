@@ -2,17 +2,18 @@
 
 ## Feedback Objective
 
-Collect actionable internal beta feedback while preserving authorized-only, safe-by-default usage. Feedback should improve reliability, documentation, UX clarity, report quality, and safety regression prevention.
+Collect actionable internal beta feedback for bugfix, UX clarity, documentation, report quality, false positive/false negative handling, and safety regression prevention.
 
-## Who Can Test
+## Feedback Sources
 
-- Internal security engineers.
-- Internal application security reviewers.
-- Internal pentesters operating under written authorization.
+- CLI tester.
+- Dashboard tester.
+- Report reviewer.
+- Safety reviewer.
 
 ## Authorized-Only Testing Requirement
 
-Use only authorized sample, lab, internal, or pre-production targets. Stop if authorization, scope, or network behavior is unclear.
+Testing must use only authorized lab, sample, internal, staging, or pre-production targets. Stop when authorization, scope, or network behavior is unclear.
 
 ## Supported Workflows
 
@@ -31,7 +32,7 @@ Use only authorized sample, lab, internal, or pre-production targets. Stop if au
 - CLI issue
 - dashboard issue
 
-## Feedback Severity
+## Severity
 
 - blocker
 - high
@@ -39,29 +40,34 @@ Use only authorized sample, lab, internal, or pre-production targets. Stop if au
 - low
 - note
 
-## Triage Process
+## Triage Rules
 
-1. Capture feedback with the closest local issue template.
-2. Record workflow, version/tag, environment, expected result, actual result, and safety impact.
-3. Assign severity.
-4. Prioritize safety concerns, data exposure, scope issues, and gate bypass reports.
-5. Link any reproduction steps to local-only or authorized test assets.
+- Blocker/high safety issue must be fixed before wider use.
+- False positive/false negative must be documented and prioritized.
+- UX issue can be grouped into patch release.
+- Feature request must be deferred unless safe and approved.
 
-## Fix Decision Process
+## Fix Rules
 
-- Fix bugfix, docs, UX clarity, report formatting, sample cleanup, and safety regression items during stabilization.
-- Defer feature expansion and any offensive capability request.
-- Keep all findings potential until manual validation.
+- Bugfix allowed.
+- Documentation improvement allowed.
+- Test improvement allowed.
+- Guardrail improvement allowed.
+- Offensive feature not allowed.
 
-## Regression Test Requirement
+## Regression Rule
 
-Every accepted fix requires either a new deterministic local test or an update to an existing test. Run `pytest -q` and safety static tests before accepting a fix.
+Every bugfix needs pytest. Safety static test must remain green.
+
+## Patch Release Rule
+
+Use `v0.3.1-beta-patch` or similar after accumulated safe fixes.
 
 ## Stop Conditions
 
-- unclear authorization
-- unclear scope
-- unexpected network behavior
-- potential secret exposure
-- unsafe scan behavior
-- out-of-scope target
+- Unclear authorization.
+- Unclear scope.
+- Unexpected network behavior.
+- Potential secret exposure.
+- Unsafe scan behavior.
+- Out-of-scope target.
