@@ -32,6 +32,15 @@ pip install -r requirements.txt
 
 ```bash
 pytest -q
+make test
+make safety
+```
+
+## Lint And Format
+
+```bash
+make lint
+make format
 ```
 
 ## CLI Usage
@@ -71,9 +80,18 @@ python cli.py scan-domain \
 
 ```bash
 streamlit run app/dashboard.py
+make run-dashboard
 ```
 
 The dashboard provides a mode selector for Type 1 source folder and Type 2 domain workflows. Type 1 runs only the local source pipeline. Type 2 includes an Assessment Workflow section for creating draft assessments, reviewing scope and authorization notes, approving authorized work, and archiving assessments. Safe-live scans require an approved, non-archived, in-scope assessment JSON or dashboard assessment, explicit authorization confirmation, safe-live passive recon enablement, limited network action approval, and an audit log path before the Run Safe-Live Scan button is enabled. The dashboard calls the guarded domain pipeline and does not implement direct network logic.
+
+## Docker
+
+```bash
+docker compose up --build dashboard
+```
+
+The container starts only the dashboard. It does not run live scans automatically, does not bake secrets into the image, and expects local `data/`, `reports/`, `exports/`, and `logs/` volumes for operator-controlled artifacts.
 
 ## Reports
 
