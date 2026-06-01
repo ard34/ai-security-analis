@@ -12,3 +12,4 @@
 - False negatives possible.
 - DNS support may be minimal.
 - HTTP fingerprinting is conservative.
+- Internal beta feedback may identify usability issues that need stabilization before broader rollout.

@@ -20,4 +20,8 @@
 - Release notes exist.
 - Known limitations exist.
 - Internal RC review checklist exists.
+- No blocker bugs open.
+- No high safety bugs open.
+- Docs updated after stabilization.
+- Release notes updated after stabilization.
 - All sample findings have `is_potential=True`.
