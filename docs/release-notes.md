@@ -1,5 +1,64 @@
 # Release Notes
 
+## v0.3.0-beta1
+
+### Summary
+
+Internal beta release prepared after RC review, pilot planning, and stabilization planning. This release is intended for controlled internal usage by authorized testers.
+
+### Changes Since RC
+
+- Added internal RC review checklist.
+- Added internal beta pilot plan and feedback template.
+- Added bugfix and stabilization process.
+- Added internal beta release guide.
+
+### Included Features
+
+- Type 1 local source folder assessment.
+- Type 2 gated safe-live passive domain assessment.
+- Dashboard assessment workflow.
+- Report export.
+- Evidence handling.
+- Finding deduplication.
+- Manual testing recommendations.
+- Audit trail.
+
+### Safety Controls
+
+- Approved assessment required.
+- In-scope target required.
+- Explicit `allow_network` required.
+- Explicit `confirm_safe_live` required.
+- Safe execution engine required.
+- Timeout, rate limit, scan budget, audit log, and kill switch support required.
+- Findings remain potential until manual validation.
+- Secret redaction applies to evidence, logs, display, and reports.
+
+### Known Limitations
+
+- Findings are potential only.
+- Manual validation is required.
+- Safe-live recon is intentionally limited.
+- False positives and false negatives are possible.
+- DNS support may be minimal.
+- HTTP fingerprinting is conservative.
+
+### Internal Beta Instructions
+
+Use `docs/internal-beta-release.md`, `docs/internal-beta-pilot-plan.md`, and `docs/internal-beta-feedback-template.md`. Run `pytest -q` before pilot use and stop on unclear authorization, uncertain scope, or unexpected network behavior.
+
+### Not Included / Intentionally Blocked Features
+
+- Exploit automation.
+- Brute force.
+- DoS.
+- Aggressive crawling.
+- External scanners.
+- Credential theft.
+- Auth bypass tooling.
+- Malware, reverse shell, or persistence.
+
 ## Version
 
 `v0.3.0-rc1`

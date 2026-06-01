@@ -2,6 +2,8 @@
 
 Use AI Security Analyst for authorized-only internal and pre-production assessment work. Stop immediately when authorization, scope, or network behavior is uncertain.
 
+For internal beta usage, read `docs/internal-beta-release.md` and follow the pilot plan before collecting tester feedback.
+
 ## Type 1 — Source Code / Folder Project Assessment
 
 1. Prepare a local source folder that is approved for review.

@@ -4,7 +4,7 @@ AI Security Analyst is a safe-by-default assistant for authorized internal secur
 
 ## Release Candidate Status
 
-This repository is prepared as `v0.3.0-rc1`, an Internal Release Candidate for controlled internal usage and review. It is not an autonomous exploitation platform, not an external scanner wrapper, and not intended for unauthorized targets.
+This repository is prepared as `v0.3.0-beta1`, an Internal Beta release for controlled internal usage and review. It is not an autonomous exploitation platform, not an external scanner wrapper, and not intended for unauthorized targets.
 
 ## Authorized-Only Usage Warning
 
@@ -140,6 +140,10 @@ Reports can be exported as JSON, HTML, or PDF. HTML output escapes user-controll
 ## Internal Beta Pack
 
 The `samples/` directory contains safe sample assessments, source and safe-live scan results, and a sample HTML report. The `docs/` directory contains the internal beta checklist, pre-live safety checklist, manual validation checklist, operator SOP, safety review, known limitations, release notes, and acceptance criteria.
+
+## Internal Beta
+
+Use `docs/internal-beta-release.md` for beta release instructions, `docs/internal-beta-pilot-plan.md` for controlled tester runs, and `docs/internal-beta-feedback-template.md` for feedback capture.
 
 ## Project Layout
 

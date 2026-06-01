@@ -20,6 +20,7 @@
 - Release notes exist.
 - Known limitations exist.
 - Internal RC review checklist exists.
+- Internal beta release guide exists.
 - No blocker bugs open.
 - No high safety bugs open.
 - Docs updated after stabilization.
