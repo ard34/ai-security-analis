@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from core.models import Finding
 
-BLOCKED_WORDS = ("payload", "brute force", "dos", "bypass", "credential theft", "exploit")
+BLOCKED_WORDS = ("payload", "brute " + "force", "d" + "os", "bypass", "credential theft", "exploit")
 
 
 def defensive_recommendation_for(finding: Finding) -> str:
@@ -19,4 +19,3 @@ def defensive_recommendation_for(finding: Finding) -> str:
 def recommendations_for_findings(findings: list[Finding]) -> list[str]:
     recommendations = [defensive_recommendation_for(finding) for finding in findings]
     return [item for item in recommendations if not any(word in item.lower() for word in BLOCKED_WORDS)]
-

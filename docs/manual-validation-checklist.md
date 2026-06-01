@@ -6,3 +6,5 @@
 - Attach safe evidence that does not contain sensitive values.
 - Write remediation guidance that is defensive only.
 - Record the manual validation decision in the report notes.
+- Keep unvalidated items marked as potential findings.
+- Escalate only confirmed issues through the approved internal process.

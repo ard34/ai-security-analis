@@ -4,7 +4,10 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .coverage
+.env
 data/*.sqlite3
+data/*
+!data/.gitkeep
 logs/*.log
 logs/*.jsonl
 reports/*
@@ -12,4 +15,3 @@ exports/*
 !reports/.gitkeep
 !exports/.gitkeep
 _archive_pre_rebuild/
-

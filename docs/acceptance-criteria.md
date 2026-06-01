@@ -1,10 +1,22 @@
 # Acceptance Criteria
 
-- All tests pass with `pytest -q`.
-- Static safety tests pass.
-- Type 1 works local-only.
-- Type 2 rejects unsafe/default execution.
+- `pytest -q` passes.
+- Safety static test passes.
+- Type 1 `scan-source` works local-only.
+- Type 2 `scan-domain` rejects default unsafe execution.
+- Type 2 requires approved assessment.
+- Type 2 requires `allow_network`.
+- Type 2 requires `confirm_safe_live`.
+- Type 2 requires audit log path.
+- Out-of-scope target rejected.
+- Reports generated successfully.
+- Evidence contains no secrets.
+- Audit log contains no secrets.
 - Dashboard does not bypass gating.
-- Reports do not leak sensitive values.
-- Findings are marked as potential until manual validation.
-- Operators follow authorized-only usage and the pre-live safety checklist.
+- Docker does not run live scan automatically.
+- CI runs pytest.
+- README explains authorized-only usage.
+- Operator SOP exists.
+- Release notes exist.
+- Known limitations exist.
+- All sample findings have `is_potential=True`.

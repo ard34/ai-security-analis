@@ -9,3 +9,5 @@
 - Timeout is set to a bounded value.
 - Kill switch remains available through the safe execution engine.
 - No exploit, brute force, DoS, fuzzing, or external scanner activity is planned.
+- Stop if target ownership, written approval, or allowed scope is unclear.
+- Confirm audit output does not contain sensitive values before sharing.

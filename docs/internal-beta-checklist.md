@@ -9,3 +9,4 @@
 - Export JSON, HTML, and PDF reports from a completed result.
 - Review evidence for relevance and confirm no sensitive values are present.
 - Confirm every finding remains a potential finding until manual validation is complete.
+- Review `docs/safety-review.md`, `docs/known-limitations.md`, and release notes before RC sign-off.

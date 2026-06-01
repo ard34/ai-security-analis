@@ -1,24 +1,51 @@
 # AI Security Analyst / AI Red Team Copilot
 
-AI Security Analyst is a safe, authorized-only assistant for internal pre-production web and API security assessment.
+AI Security Analyst is a safe-by-default assistant for authorized internal security review. The product vision is to help operators collect structured evidence, identify potential findings, prepare defensive reports, and keep every live action inside explicit authorization and scope gates.
 
-It has two workflows:
+## Release Candidate Status
 
-1. **Type 1: Source Code / Folder Project Assessment**
-   Local white-box review of a folder. It maps project structure, route/API hints, auth/config hints, security smells, evidence, potential findings, and manual validation recommendations.
+This repository is prepared as `v0.3.0-rc1`, an Internal Release Candidate for controlled internal usage and review. It is not an autonomous exploitation platform, not an external scanner wrapper, and not intended for unauthorized targets.
 
-2. **Type 2: Domain / Website Target Assessment**
-   Guarded safe-live passive recon for approved in-scope domains only. It performs DNS A/AAAA lookup, safe HTTP GET/HEAD requests, security header review, robots.txt, sitemap.xml, and light HTTP fingerprinting.
+## Authorized-Only Usage Warning
+
+- Use only with written authorization and confirmed scope.
+- Findings are potential findings until manual validation is complete.
+- Manual validation is required before reporting impact.
+- Do not use on unauthorized targets.
+- No exploit, brute force, DoS, aggressive scanner, credential theft, auth bypass, malware, reverse shell, or persistence activity is supported.
+- Sensitive values such as bearer headers, cookies, tokens, passwords, keys, and secrets must not be stored in logs, evidence, or reports.
+
+## Workflows
+
+### Type 1 — Source Code / Folder Project Assessment
+
+Type 1 is a local-only white-box workflow. It maps project structure, route/API hints, auth/config hints, security smells, evidence, potential findings, finding deduplication, and manual validation recommendations. It does not perform network activity.
+
+### Type 2 — Domain / Website Target Assessment
+
+Type 2 is a gated safe-live passive workflow for approved in-scope domains. It uses the safe execution engine and requires approved assessment scope, explicit `allow_network`, explicit `confirm_safe_live`, timeout, rate limit, scan budget, audit log path, and kill switch support. It does not run by default.
 
 ## Safety Boundaries
 
-- Authorized use only.
-- Every finding is a potential finding until manually validated.
-- No exploit generation or autonomous exploitation.
-- No brute force, DoS, aggressive crawling, fuzzing, scanner orchestration, credential theft, or auth bypass.
-- Type 1 has no network behavior and no subprocess execution.
-- Type 2 defaults to no network and requires approval, scope validation, `--allow-network`, `--confirm-safe-live`, budget, timeout, rate limit, audit logging, and safe-live policy gates.
-- Sensitive values such as Authorization, cookies, tokens, passwords, API keys, and secrets are redacted from logs, exports, and reports.
+- Type 1 is local-only.
+- Type 2 defaults to no network.
+- Domain scans reject unapproved assessments.
+- Out-of-scope targets are rejected.
+- Live actions are constrained by timeout, rate limit, scan budget, and audit logging.
+- Reports and display helpers redact sensitive values.
+- All findings remain potential until manually validated.
+
+## Release Candidate Scope
+
+- Local source assessment.
+- Safe-live passive domain assessment.
+- Assessment workflow.
+- Report generation.
+- Evidence store.
+- Finding deduplication.
+- Manual testing recommendation.
+- Audit trail.
+- Internal beta checklist.
 
 ## Install
 
@@ -52,7 +79,7 @@ python cli.py scan-source --path /path/to/project --save-result
 python cli.py report-source --path /path/to/project --html-out reports/source.html --pdf-out reports/source.pdf
 ```
 
-JSON and history:
+JSON import/export and history:
 
 ```bash
 python cli.py history
@@ -74,32 +101,45 @@ python cli.py scan-domain \
   --audit-log-path logs/audit.jsonl
 ```
 
-`scan-domain` rejects unapproved assessments, out-of-scope targets, missing `--allow-network`, missing `--confirm-safe-live`, and missing audit logging.
+`scan-domain` rejects unsafe/default execution, missing approval, out-of-scope targets, missing `--allow-network`, missing `--confirm-safe-live`, and missing audit logging.
 
-## Dashboard
+## Dashboard Usage
 
 ```bash
 streamlit run app/dashboard.py
 make run-dashboard
 ```
 
-The dashboard provides a mode selector for Type 1 source folder and Type 2 domain workflows. Type 1 runs only the local source pipeline. Type 2 includes an Assessment Workflow section for creating draft assessments, reviewing scope and authorization notes, approving authorized work, and archiving assessments. Safe-live scans require an approved, non-archived, in-scope assessment JSON or dashboard assessment, explicit authorization confirmation, safe-live passive recon enablement, limited network action approval, and an audit log path before the Run Safe-Live Scan button is enabled. The dashboard calls the guarded domain pipeline and does not implement direct network logic.
+The dashboard has a mode selector for Type 1 and Type 2 workflows. Type 2 includes an Assessment Workflow section for creating draft assessments, reviewing scope and authorization notes, approving authorized work, and archiving assessments. The dashboard does not bypass approval, scope validation, safe execution, confirmation, audit log, timeout, rate limit, or scan budget gates.
 
-## Docker
+## Docker Usage
 
 ```bash
 docker compose up --build dashboard
 ```
 
-The container starts only the dashboard. It does not run live scans automatically, does not bake secrets into the image, and expects local `data/`, `reports/`, `exports/`, and `logs/` volumes for operator-controlled artifacts.
+The container starts only the dashboard. It does not run live scans automatically and does not bake secrets into the image.
 
-## Reports
+## Report Export Usage
 
-Reports can be exported as HTML, PDF, or JSON. HTML output escapes user-controlled content. PDF uses `reportlab` when available and falls back to a safe byte representation of the HTML report.
+Reports can be exported as JSON, HTML, or PDF. HTML output escapes user-controlled content. PDF uses `reportlab` when available and falls back to a safe byte representation of the HTML report.
+
+## Known Limitations
+
+- Findings are potential only.
+- Manual validation is required.
+- Safe-live recon is intentionally limited.
+- No exploit validation.
+- No active scanner integration.
+- No aggressive crawling.
+- No credentialed testing design is included.
+- False positives and false negatives are possible.
+- DNS support may be minimal.
+- HTTP fingerprinting is conservative.
 
 ## Internal Beta Pack
 
-The `samples/` directory contains safe sample assessments, source and safe-live scan results, and a sample HTML report. The `docs/` directory contains the internal beta checklist, pre-live safety checklist, manual validation checklist, operator SOP, and acceptance criteria.
+The `samples/` directory contains safe sample assessments, source and safe-live scan results, and a sample HTML report. The `docs/` directory contains the internal beta checklist, pre-live safety checklist, manual validation checklist, operator SOP, safety review, known limitations, release notes, and acceptance criteria.
 
 ## Project Layout
 
