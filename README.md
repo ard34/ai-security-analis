@@ -73,7 +73,7 @@ python cli.py scan-domain \
 streamlit run app/dashboard.py
 ```
 
-The dashboard provides a mode selector for Type 1 source folder and Type 2 domain workflows. Type 2 controls stay gated behind approval and explicit confirmation.
+The dashboard provides a mode selector for Type 1 source folder and Type 2 domain workflows. Type 1 runs only the local source pipeline. Type 2 requires an approved in-scope assessment JSON, explicit authorization confirmation, safe-live passive recon enablement, limited network action approval, and an audit log path before the Run Safe-Live Scan button is enabled. The dashboard calls the guarded domain pipeline and does not implement direct network logic.
 
 ## Reports
 
@@ -90,4 +90,3 @@ reporting/      HTML/PDF reporting
 storage/        SQLite and JSON persistence
 tests/          safety and behavior tests
 ```
-
