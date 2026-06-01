@@ -1,0 +1,86 @@
+{
+  "assets": [
+    {
+      "id": "asset_sample_domain",
+      "metadata": {},
+      "type": "domain",
+      "value": "example.com"
+    }
+  ],
+  "audit_events": [
+    {
+      "event": "domain_assessment_started",
+      "target": "example.com",
+      "timestamp": "2026-06-01T00:30:00+00:00"
+    },
+    {
+      "event": "guarded_live_action",
+      "live_action": "HEAD https://example.com",
+      "timestamp": "2026-06-01T00:30:01+00:00",
+      "used_budget": 1
+    },
+    {
+      "event": "domain_assessment_completed",
+      "target": "example.com",
+      "timestamp": "2026-06-01T00:31:00+00:00"
+    }
+  ],
+  "completed_at": "2026-06-01T00:31:00+00:00",
+  "endpoints": [],
+  "evidence": [
+    {
+      "collected_at": "2026-06-01T00:30:10+00:00",
+      "content": "{'A': ['93.184.216.34'], 'AAAA': []}",
+      "id": "evidence_sample_dns",
+      "metadata": {},
+      "source": "dns_a_aaaa"
+    },
+    {
+      "collected_at": "2026-06-01T00:30:20+00:00",
+      "content": "{'status': 200, 'headers': {'server': 'sample'}}",
+      "id": "evidence_sample_headers",
+      "metadata": {},
+      "source": "security_headers"
+    }
+  ],
+  "findings": [
+    {
+      "asset_id": "asset_sample_domain",
+      "confidence": "low",
+      "description": "A safe HEAD request did not observe this defensive response header.",
+      "endpoint_id": null,
+      "evidence_ids": [
+        "evidence_sample_headers"
+      ],
+      "id": "finding_sample_header",
+      "is_potential": true,
+      "metadata": {
+        "fingerprint": "sample-fingerprint"
+      },
+      "recommendations": [
+        "Confirm the response header behavior manually in the approved environment."
+      ],
+      "severity": "low",
+      "title": "Potential missing security header: content-security-policy"
+    }
+  ],
+  "id": "scan_sample_domain",
+  "metadata": {
+    "assessment_name": "Sample Approved Assessment",
+    "execution_context": {
+      "allow_network": true,
+      "confirm_safe_live": true,
+      "rate_limit_per_second": 1.0,
+      "safe_live": true,
+      "scan_budget": 8,
+      "timeout_seconds": 5.0
+    },
+    "sample": true
+  },
+  "recommendations": [
+    "Manually verify whether the header is intentionally omitted before filing remediation."
+  ],
+  "started_at": "2026-06-01T00:30:00+00:00",
+  "target": "example.com",
+  "workflow": "type2_domain"
+}

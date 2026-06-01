@@ -97,6 +97,10 @@ The container starts only the dashboard. It does not run live scans automaticall
 
 Reports can be exported as HTML, PDF, or JSON. HTML output escapes user-controlled content. PDF uses `reportlab` when available and falls back to a safe byte representation of the HTML report.
 
+## Internal Beta Pack
+
+The `samples/` directory contains safe sample assessments, source and safe-live scan results, and a sample HTML report. The `docs/` directory contains the internal beta checklist, pre-live safety checklist, manual validation checklist, operator SOP, and acceptance criteria.
+
 ## Project Layout
 
 ```text
@@ -106,5 +110,7 @@ core/           assessment models, safety policies, scope, pipelines
 modules/        passive source and live-safe modules
 reporting/      HTML/PDF reporting
 storage/        SQLite and JSON persistence
+samples/        Safe sample assessments and scan artifacts
+docs/           Internal beta operator checklists and criteria
 tests/          safety and behavior tests
 ```

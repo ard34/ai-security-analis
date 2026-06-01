@@ -1,0 +1,62 @@
+{
+  "assets": [
+    {
+      "id": "asset_sample_source",
+      "metadata": {},
+      "type": "source_folder",
+      "value": "samples/source-app"
+    }
+  ],
+  "audit_events": [],
+  "completed_at": "2026-06-01T00:20:00+00:00",
+  "endpoints": [
+    {
+      "id": "endpoint_sample_login",
+      "metadata": {},
+      "method": "GET",
+      "path": "/login",
+      "source": "routes.py",
+      "url": null
+    }
+  ],
+  "evidence": [
+    {
+      "collected_at": "2026-06-01T00:19:00+00:00",
+      "content": "Route and configuration hints found during local-only source review.",
+      "id": "evidence_sample_source",
+      "metadata": {
+        "review_mode": "local-only"
+      },
+      "source": "source_map"
+    }
+  ],
+  "findings": [
+    {
+      "asset_id": "asset_sample_source",
+      "confidence": "low",
+      "description": "Static source review identified a pattern that needs manual validation.",
+      "endpoint_id": "endpoint_sample_login",
+      "evidence_ids": [
+        "evidence_sample_source"
+      ],
+      "id": "finding_sample_source",
+      "is_potential": true,
+      "metadata": {},
+      "recommendations": [
+        "Review the route manually and confirm expected authentication behavior."
+      ],
+      "severity": "info",
+      "title": "Potential route requiring review"
+    }
+  ],
+  "id": "scan_sample_source",
+  "metadata": {
+    "sample": true
+  },
+  "recommendations": [
+    "Validate the potential finding manually before reporting impact."
+  ],
+  "started_at": "2026-06-01T00:18:00+00:00",
+  "target": "samples/source-app",
+  "workflow": "type1_source"
+}

@@ -1,0 +1,15 @@
+{
+  "allowed_ips": [],
+  "allowed_targets": [
+    "example.com"
+  ],
+  "approved": false,
+  "approved_at": null,
+  "archived_at": null,
+  "authorization_note": "Internal pre-production review approved by Security Team ticket SEC-123.",
+  "created_at": "2026-06-01T00:00:00+00:00",
+  "environment": "pre-production",
+  "name": "Sample Draft Assessment",
+  "owner_operator": "Security Team",
+  "status": "draft"
+}
