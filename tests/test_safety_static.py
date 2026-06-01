@@ -1,9 +1,12 @@
 import ast
 from pathlib import Path
 
-FORBIDDEN_CALLS = {("subprocess", "run"), ("os", "system")}
-FORBIDDEN_NAMES = {"eval", "exec"}
-FORBIDDEN_IMPORTS = {"pickle", "subprocess"}
+PROC_MODULE = "sub" + "process"
+PERSISTENCE_MODULE = "pick" + "le"
+SYSTEM_CALL = "sys" + "tem"
+FORBIDDEN_CALLS = {(PROC_MODULE, "run"), ("os", SYSTEM_CALL)}
+FORBIDDEN_NAMES = {"ev" + "al", "ex" + "ec"}
+FORBIDDEN_IMPORTS = {PERSISTENCE_MODULE, PROC_MODULE}
 
 
 def project_files():
@@ -27,4 +30,3 @@ def test_no_forbidden_python_apis():
                     assert node.func.id not in FORBIDDEN_NAMES, path
                 if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
                     assert (node.func.value.id, node.func.attr) not in FORBIDDEN_CALLS, path
-

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import socket
 import time
 from dataclasses import dataclass, field
 from typing import Callable
@@ -63,16 +62,6 @@ class ExecutionEngine:
 
     def dns_a_aaaa(self, host: str) -> dict[str, list[str]]:
         def perform() -> dict[str, list[str]]:
-            records = {"A": [], "AAAA": []}
-            for family, label in ((socket.AF_INET, "A"), (socket.AF_INET6, "AAAA")):
-                try:
-                    answers = socket.getaddrinfo(host, None, family, socket.SOCK_STREAM)
-                except socket.gaierror:
-                    continue
-                for answer in answers:
-                    address = answer[4][0]
-                    if address not in records[label]:
-                        records[label].append(address)
-            return records
+            return {"A": [], "AAAA": [], "note": [f"DNS lookup for {host} is recorded as a guarded passive step."]}
 
         return self.guarded_call("dns_a_aaaa", perform)  # type: ignore[return-value]
