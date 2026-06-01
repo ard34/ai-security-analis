@@ -49,10 +49,26 @@ Type 2 is a gated safe-live passive workflow for approved in-scope domains. It u
 
 ## Install
 
+Core mode installs only the dependencies needed for the CLI, reports, storage, pipelines, and safety checks. It intentionally does not install Streamlit or its dashboard dependency tree.
+
 ```bash
 python -m venv .venv
 . .venv/bin/activate
-pip install -r requirements.txt
+python -m pip install -r requirements-core.txt
+```
+
+`requirements.txt` is an alias for core mode:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+## Dev / Test Install
+
+Install the core dependencies plus test and lint tools:
+
+```bash
+python -m pip install -r requirements-dev.txt
 ```
 
 ## Test
@@ -105,6 +121,12 @@ python cli.py scan-domain \
 
 ## Dashboard Usage
 
+Dashboard UI dependencies are optional. Install them only when you need to run Streamlit:
+
+```bash
+python -m pip install -r requirements-ui.txt
+```
+
 ```bash
 streamlit run app/dashboard.py
 make run-dashboard
@@ -123,6 +145,10 @@ The container starts only the dashboard. It does not run live scans automaticall
 ## Report Export Usage
 
 Reports can be exported as JSON, HTML, or PDF. HTML output escapes user-controlled content. PDF uses `reportlab` when available and falls back to a safe byte representation of the HTML report.
+
+## Python 3.15 Compatibility
+
+Core mode is designed to run on Python 3.15 without installing Streamlit, pyarrow, pandas, numpy, or other dashboard dependencies that may not yet publish stable wheels. Use `requirements-core.txt` for CLI/report/storage/pipeline/safety workflows and `requirements-dev.txt` for pytest and ruff. Use `requirements-ui.txt` only on environments where the Streamlit dependency stack is supported.
 
 ## Known Limitations
 
