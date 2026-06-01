@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import html
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -38,8 +39,109 @@ def load_dashboard_assessment_json(raw_json: str) -> tuple[Assessment | None, st
         assessment = Assessment.from_dict(data)
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         return None, None, f"invalid assessment JSON: {exc}"
-    note = data.get("authorization_note") or data.get("authorization") or data.get("note")
+    note = assessment.authorization_note or data.get("authorization_note") or data.get("authorization") or data.get("note")
     return assessment, str(note) if note else None, None
+
+
+def _split_scope_values(value: str | list[str]) -> list[str]:
+    if isinstance(value, list):
+        items = value
+    else:
+        items = value.replace("\n", ",").split(",")
+    return [str(item).strip().lower().rstrip(".") for item in items if str(item).strip()]
+
+
+def build_assessment_form_state(
+    *,
+    name: str,
+    target: str,
+    allowed_domains: str | list[str],
+    allowed_ips: str | list[str] = "",
+    owner_operator: str = "",
+    authorization_note: str = "",
+    environment: str = "pre-production",
+) -> Assessment:
+    domains = _split_scope_values(allowed_domains)
+    normalized_target = target.strip().lower().rstrip(".")
+    if normalized_target and normalized_target not in domains:
+        domains.append(normalized_target)
+    return Assessment(
+        name=name.strip(),
+        allowed_targets=domains,
+        owner_operator=owner_operator.strip(),
+        authorization_note=str(redact_value("authorization_note", authorization_note.strip())),
+        environment=environment.strip() or "pre-production",
+        allowed_ips=_split_scope_values(allowed_ips),
+    )
+
+
+def assessment_scope_to_display_rows(assessment: Assessment | None) -> list[dict[str, str]]:
+    if not assessment:
+        return []
+    rows = [{"type": "domain", "value": item} for item in assessment.allowed_targets]
+    rows.extend({"type": "ip", "value": item} for item in assessment.allowed_ips)
+    return sanitize_dashboard_display_data(rows)
+
+
+def can_approve_assessment_from_ui(assessment: Assessment | None) -> bool:
+    if not assessment:
+        return False
+    if assessment.status == "archived":
+        return False
+    if not assessment.name.strip() or not assessment.allowed_targets:
+        return False
+    if not assessment.owner_operator.strip() or not assessment.authorization_note.strip():
+        return False
+    try:
+        assessment.scope()
+    except ScopeError:
+        return False
+    return True
+
+
+def can_archive_assessment_from_ui(assessment: Assessment | None) -> bool:
+    return bool(assessment and assessment.status != "archived")
+
+
+def summarize_assessment_project(assessment: Assessment | None) -> dict[str, Any]:
+    if not assessment:
+        return {"status": "missing", "allowed_scope": []}
+    return sanitize_assessment_display_data(
+        {
+            "name": assessment.name,
+            "status": assessment.status,
+            "approved": assessment.approved,
+            "owner_operator": assessment.owner_operator,
+            "environment": assessment.environment,
+            "authorization_note": html.escape(str(assessment.authorization_note), quote=True),
+            "allowed_scope": assessment_scope_to_display_rows(assessment),
+            "created_at": assessment.created_at,
+            "approved_at": assessment.approved_at,
+            "archived_at": assessment.archived_at,
+        }
+    )
+
+
+def filter_scan_history_by_assessment(history: list[dict[str, Any]], assessment: Assessment | None) -> list[dict[str, Any]]:
+    if not assessment:
+        return []
+    filtered: list[dict[str, Any]] = []
+    for row in history:
+        target = str(row.get("target", ""))
+        assessment_name = str(row.get("assessment_name") or row.get("assessment") or "")
+        if assessment_name == assessment.name:
+            filtered.append(row)
+            continue
+        try:
+            if target and assessment.scope().contains(target):
+                filtered.append(row)
+        except ScopeError:
+            continue
+    return sanitize_dashboard_display_data(filtered)
+
+
+def sanitize_assessment_display_data(data: Any) -> Any:
+    return sanitize_dashboard_display_data(data)
 
 
 def summarize_assessment_status(
@@ -50,9 +152,10 @@ def summarize_assessment_status(
 ) -> dict[str, Any]:
     status: dict[str, Any] = {
         "approved": bool(assessment and assessment.approved),
+        "status": assessment.status if assessment else "missing",
         "allowed_scope": list(assessment.allowed_targets) if assessment else [],
         "target_in_scope": False,
-        "authorization_note": redact_value("authorization_note", authorization_note or ""),
+        "authorization_note": html.escape(str(redact_value("authorization_note", authorization_note or "")), quote=True),
     }
     if not assessment:
         status["reason"] = "assessment JSON is not loaded"
@@ -81,6 +184,8 @@ def safe_live_gate_reasons(
     if not assessment:
         reasons.append("assessment JSON is not loaded")
         return reasons
+    if assessment.status == "archived":
+        reasons.append("assessment is archived")
     if not assessment.approved:
         reasons.append("assessment is not approved")
     if not target.strip():
@@ -112,6 +217,25 @@ def can_run_safe_live_from_dashboard(
     audit_log_path: str | None,
 ) -> bool:
     return not safe_live_gate_reasons(
+        assessment=assessment,
+        target=target,
+        confirmed=confirmed,
+        safe_live=safe_live,
+        allow_network=allow_network,
+        audit_log_path=audit_log_path,
+    )
+
+
+def can_run_domain_scan_for_assessment(
+    *,
+    assessment: Assessment | None,
+    target: str,
+    confirmed: bool,
+    safe_live: bool,
+    allow_network: bool,
+    audit_log_path: str | None,
+) -> bool:
+    return can_run_safe_live_from_dashboard(
         assessment=assessment,
         target=target,
         confirmed=confirmed,
@@ -228,7 +352,45 @@ def _render_type1(st: Any) -> None:
     _render_export_buttons(st, result)
 
 
+def _render_assessment_workflow(st: Any) -> Assessment | None:
+    st.subheader("Assessment Workflow")
+    name = st.text_input("Assessment name")
+    target = st.text_input("Assessment target")
+    allowed_domains = st.text_area("Allowed domains")
+    allowed_ips = st.text_area("Allowed IPs optional")
+    owner_operator = st.text_input("Owner/operator")
+    authorization_note = st.text_area("Authorization note")
+    environment = st.text_input("Environment/pre-production label", value="pre-production")
+
+    if st.button("Create Assessment Draft"):
+        st.session_state["assessment_project"] = build_assessment_form_state(
+            name=name,
+            target=target,
+            allowed_domains=allowed_domains,
+            allowed_ips=allowed_ips,
+            owner_operator=owner_operator,
+            authorization_note=authorization_note,
+            environment=environment,
+        )
+
+    assessment = st.session_state.get("assessment_project")
+    if assessment:
+        if st.button("Approve Assessment", disabled=not can_approve_assessment_from_ui(assessment)):
+            assessment.approve()
+            st.session_state["assessment_project"] = assessment
+        if st.button("Archive Assessment", disabled=not can_archive_assessment_from_ui(assessment)):
+            assessment.archive()
+            st.session_state["assessment_project"] = assessment
+        st.json(summarize_assessment_project(assessment))
+        st.subheader("Allowed scope")
+        st.json(assessment_scope_to_display_rows(assessment))
+        st.subheader("Scan history")
+        st.json(filter_scan_history_by_assessment(st.session_state.get("scan_history", []), assessment))
+    return assessment
+
+
 def _render_type2(st: Any) -> None:
+    workflow_assessment = _render_assessment_workflow(st)
     target = st.text_input("Target domain")
     assessment_path = st.text_input("Assessment JSON path")
     raw_json = st.text_area("Assessment JSON")
@@ -238,7 +400,10 @@ def _render_type2(st: Any) -> None:
         except OSError as exc:
             st.error(f"Unable to read assessment JSON: {exc}")
     assessment, authorization_note, load_error = load_dashboard_assessment_json(raw_json)
-    if load_error:
+    if not assessment and workflow_assessment:
+        assessment = workflow_assessment
+        authorization_note = workflow_assessment.authorization_note
+    if load_error and not workflow_assessment:
         st.warning(load_error)
 
     status = summarize_assessment_status(assessment, target, authorization_note=authorization_note)
