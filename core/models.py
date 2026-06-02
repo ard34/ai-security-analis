@@ -7,6 +7,15 @@ from uuid import uuid4
 
 from core.risk import normalize_severity
 
+VALIDATION_STATUSES = {
+    "potential",
+    "logic_analyzed",
+    "validation_ready",
+    "manually_confirmed",
+    "false_positive",
+    "accepted_risk",
+}
+
 
 def utc_now() -> str:
     return datetime.now(UTC).isoformat()
@@ -68,10 +77,27 @@ class Finding:
     is_potential: bool = True
     confidence: str = "low"
     metadata: dict[str, Any] = field(default_factory=dict)
+    source_locations: list[dict[str, Any]] = field(default_factory=list)
+    affected_routes: list[str] = field(default_factory=list)
+    affected_functions: list[str] = field(default_factory=list)
+    vulnerable_flow: str = ""
+    root_cause: str = ""
+    missing_control: str = ""
+    attacker_model: str = ""
+    preconditions: list[str] = field(default_factory=list)
+    exploitability_reasoning: str = ""
+    manual_validation_steps: list[str] = field(default_factory=list)
+    expected_evidence: list[str] = field(default_factory=list)
+    false_positive_checks: list[str] = field(default_factory=list)
+    remediation_guidance: str = ""
+    confidence_score: float = 0.0
+    validation_status: str = "potential"
 
     def __post_init__(self) -> None:
         self.severity = normalize_severity(self.severity)
         self.is_potential = True
+        if self.validation_status not in VALIDATION_STATUSES:
+            self.validation_status = "potential"
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)

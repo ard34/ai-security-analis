@@ -26,6 +26,7 @@ def build_parser() -> argparse.ArgumentParser:
     scan_source = sub.add_parser("scan-source")
     scan_source.add_argument("--path", required=True)
     scan_source.add_argument("--save-result", action="store_true")
+    scan_source.add_argument("--logic-analysis", action="store_true")
     report_source = sub.add_parser("report-source")
     report_source.add_argument("--path", required=True)
     report_source.add_argument("--html-out")
@@ -33,6 +34,12 @@ def build_parser() -> argparse.ArgumentParser:
     export_json = sub.add_parser("export-json")
     export_json.add_argument("--scan-id", required=True)
     export_json.add_argument("--out", required=True)
+    export_html = sub.add_parser("export-html")
+    export_html.add_argument("--scan-id", required=True)
+    export_html.add_argument("--out", required=True)
+    export_pdf = sub.add_parser("export-pdf")
+    export_pdf.add_argument("--scan-id", required=True)
+    export_pdf.add_argument("--out", required=True)
     import_json = sub.add_parser("import-json")
     import_json.add_argument("--path", required=True)
     sub.add_parser("history")
@@ -62,7 +69,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "scan-source":
-        result = run_source_assessment(args.path)
+        result = run_source_assessment(args.path, logic_analysis=args.logic_analysis)
         if args.save_result:
             _repo().save(result)
         print(result.id)
@@ -80,6 +87,18 @@ def main(argv: list[str] | None = None) -> int:
         if not result:
             raise SystemExit("scan not found")
         write_json(args.out, result.to_dict())
+        return 0
+    if args.command == "export-html":
+        result = _repo().get(args.scan_id)
+        if not result:
+            raise SystemExit("scan not found")
+        Path(args.out).write_text(render_html_report(result), encoding="utf-8")
+        return 0
+    if args.command == "export-pdf":
+        result = _repo().get(args.scan_id)
+        if not result:
+            raise SystemExit("scan not found")
+        Path(args.out).write_bytes(render_pdf_report(result))
         return 0
     if args.command == "import-json":
         from core.models import ScanResult

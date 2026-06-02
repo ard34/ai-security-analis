@@ -7,10 +7,13 @@ from core.evidence import collect_local_evidence
 from core.finding_dedup import deduplicate_findings
 from core.manual_testing import recommendations_for_findings
 from core.models import Asset, Endpoint, Finding, ScanResult
+from core.source_logic_analysis import analyze_source_logic
 from modules.source_mapper import map_source_folder
 
 
-def run_source_assessment(path: str | Path, *, max_file_bytes: int | None = None) -> ScanResult:
+def run_source_assessment(
+    path: str | Path, *, max_file_bytes: int | None = None, logic_analysis: bool = False
+) -> ScanResult:
     config = load_config()
     source_map = map_source_folder(path, max_file_bytes=max_file_bytes or config.max_file_bytes)
     result = ScanResult(target=source_map.root, workflow="type1_source")
@@ -42,6 +45,15 @@ def run_source_assessment(path: str | Path, *, max_file_bytes: int | None = None
                 evidence_ids=[evidence.id],
             )
         )
+    if logic_analysis:
+        logic_result = analyze_source_logic(path, max_file_bytes=max_file_bytes or config.max_file_bytes)
+        logic_evidence = collect_local_evidence("source_logic_analysis", str(logic_result.to_dict()))
+        result.evidence.append(logic_evidence)
+        for finding in logic_result.findings:
+            finding.asset_id = root_asset.id
+            finding.evidence_ids.append(logic_evidence.id)
+            findings.append(finding)
+        result.metadata["source_logic_analysis"] = logic_result.to_dict()
     result.findings = deduplicate_findings(findings)
     result.recommendations = recommendations_for_findings(result.findings)
     result.metadata["source_map"] = source_map.to_dict()

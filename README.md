@@ -92,6 +92,7 @@ Type 1 local source assessment:
 
 ```bash
 python cli.py scan-source --path /path/to/project --save-result
+python cli.py scan-source --path /path/to/project --logic-analysis --save-result
 python cli.py report-source --path /path/to/project --html-out reports/source.html --pdf-out reports/source.pdf
 ```
 
@@ -101,8 +102,12 @@ JSON import/export and history:
 python cli.py history
 python cli.py show --scan-id scan_x
 python cli.py export-json --scan-id scan_x --out exports/scan.json
+python cli.py export-html --scan-id scan_x --out exports/scan.html
+python cli.py export-pdf --scan-id scan_x --out exports/scan.pdf
 python cli.py import-json --path exports/scan.json
 ```
+
+`--logic-analysis` is optional and local-only. It analyzes source code logic patterns and can produce `validation_ready` findings with manual validation steps, expected evidence, false-positive checks, and remediation guidance. These findings still require manual confirmation by an authorized tester. See `docs/source-logic-analysis.md` and `docs/manual-validation-workflow.md`.
 
 Type 2 gated safe-live assessment:
 
