@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 
 from core.models import VALIDATION_STATUSES, Finding
@@ -7,6 +8,10 @@ from core.policies import redact_value
 
 UI_VALIDATION_STATUSES = [*sorted(VALIDATION_STATUSES), "needs_more_review"]
 AI_ALLOWED_VALIDATION_STATUSES = {"potential", "logic_analyzed", "validation_ready"}
+VALIDATION_SECRET_PATTERNS = [
+    re.compile(r"(?i)(authorization\s*:\s*bearer\s+)[^\s,;]+"),
+    re.compile(r"(?i)((?:api[_-]?key|token|password|cookie|session)\s*[:=]\s*)[^\s,;]+"),
+]
 
 
 def build_validation_status_options() -> list[str]:
@@ -23,7 +28,10 @@ def build_validation_status_options() -> list[str]:
 
 
 def sanitize_validation_note(note: str) -> str:
-    return str(redact_value("validation_note", note.strip()))
+    sanitized = str(redact_value("validation_note", note.strip()))
+    for pattern in VALIDATION_SECRET_PATTERNS:
+        sanitized = pattern.sub(r"\1[REDACTED]", sanitized)
+    return sanitized
 
 
 def can_mark_finding_manually_confirmed(*, reviewer: str, note: str, evidence_note: str) -> bool:

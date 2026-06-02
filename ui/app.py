@@ -24,12 +24,21 @@ from core.pipeline_domain import run_domain_assessment
 from core.pipeline_source import run_source_assessment
 from core.policies import DomainRunPolicy, redact_value
 from core.scope import ScopeError
+from core.workspace import Workspace, append_workspace_chat_message, create_workspace, restore_workspace_state
 from reporting.html_report import render_html_report
 from reporting.pdf_report import render_pdf_report
+from storage.database import connect
+from storage.repositories import ScanRepository
+from storage.workspace_repository import WorkspaceRepository
 from ui.chat import handle_copilot_chat_turn, summarize_scan_for_copilot
 
 TYPE1_MODE = "Type 1 — Source Folder Assessment"
 TYPE2_MODE = "Type 2 — Domain Safe-Live Assessment"
+DB_PATH = Path("data/ai_security_analyst.sqlite3")
+
+
+def _scan_repo() -> ScanRepository:
+    return ScanRepository(connect(DB_PATH))
 
 
 def mode_options() -> list[str]:
@@ -159,6 +168,124 @@ def build_safety_status_banner(
         "confirmation": confirmed,
         "kill_switch": "enabled" if kill_switch_enabled else "disabled",
     }
+
+
+def initialize_workspace_state(
+    session_state: dict[str, Any],
+    *,
+    workspace_repository: WorkspaceRepository | None = None,
+) -> Workspace:
+    workspace = session_state.get("workspace")
+    if isinstance(workspace, Workspace):
+        return workspace
+    rows = workspace_repository.list_workspaces() if workspace_repository else []
+    loaded = workspace_repository.get_workspace(rows[0]["id"]) if workspace_repository and rows else None
+    workspace = loaded or create_workspace()
+    session_state["workspace"] = workspace
+    restored = restore_workspace_state(workspace)
+    session_state["workspace_id"] = restored["workspace_id"]
+    session_state["chat_messages"] = restored["chat_history"]
+    session_state["selected_finding_id"] = restored["active_finding_id"]
+    return workspace
+
+
+def load_saved_scans_for_sidebar(scan_repository: Any) -> list[dict[str, str]]:
+    return scan_repository.list()
+
+
+def select_scan_for_workspace(
+    session_state: dict[str, Any],
+    scan_repository: Any,
+    workspace: Workspace,
+    scan_id: str,
+) -> ScanResult | None:
+    result = scan_repository.get(scan_id)
+    if not result:
+        return None
+    workspace.active_scan_id = result.id
+    session_state["last_scan_result"] = result
+    session_state["workspace"] = workspace
+    return result
+
+
+def select_finding_for_workspace(
+    session_state: dict[str, Any],
+    workspace: Workspace,
+    result: ScanResult | None,
+    finding_id: str,
+) -> Finding | None:
+    if not result:
+        return None
+    for index, finding in enumerate(result.findings):
+        if finding.id == finding_id:
+            workspace.active_finding_id = finding_id
+            session_state["selected_finding_id"] = finding_id
+            session_state["selected_finding_index"] = index
+            session_state["workspace"] = workspace
+            return finding
+    return None
+
+
+def can_restore_selected_finding(result: ScanResult | None, finding_id: str | None) -> bool:
+    return bool(result and finding_id and any(finding.id == finding_id for finding in result.findings))
+
+
+def persist_chat_turn(
+    workspace: Workspace,
+    *,
+    user_message: str,
+    assistant_message: str,
+    workspace_repository: WorkspaceRepository | None = None,
+) -> Workspace:
+    append_workspace_chat_message(workspace, role="user", content=user_message)
+    append_workspace_chat_message(workspace, role="assistant", content=assistant_message)
+    if workspace_repository:
+        workspace_repository.save_workspace(workspace)
+    return workspace
+
+
+def persist_validation_update(
+    workspace: Workspace,
+    *,
+    finding_id: str,
+    old_status: str,
+    new_status: str,
+    reviewer: str = "",
+    note: str = "",
+    evidence_note: str = "",
+    workspace_repository: WorkspaceRepository | None = None,
+) -> Workspace:
+    if workspace_repository:
+        return workspace_repository.append_validation_activity(
+            workspace.workspace_id,
+            finding_id=finding_id,
+            old_status=old_status,
+            new_status=new_status,
+            reviewer=reviewer,
+            note=note,
+            evidence_note=evidence_note,
+        )
+    from core.workspace import create_validation_activity
+
+    workspace.validation_activity.append(
+        create_validation_activity(
+            finding_id=finding_id,
+            old_status=old_status,
+            new_status=new_status,
+            reviewer=reviewer,
+            note=note,
+            evidence_note=evidence_note,
+        )
+    )
+    return workspace
+
+
+def build_workspace_sidebar_rows(workspaces: list[dict[str, str]], scans: list[dict[str, str]]) -> dict[str, object]:
+    return {"workspaces": workspaces, "scans": scans}
+
+
+def sanitize_workspace_display_data(data: Any) -> Any:
+    return sanitize_dashboard_display_data(data)
 
 
 def can_enable_domain_mode(assessment: Assessment | None, confirmed: bool) -> bool:
@@ -520,6 +647,7 @@ def _render_finding_workspace(st: Any, result: ScanResult | None) -> None:
         evidence_note = st.text_area("Evidence note")
         if st.button("Update validation status"):
             try:
+                old_status = finding.validation_status
                 update_finding_validation_status(
                     finding,
                     status=status,
@@ -528,6 +656,17 @@ def _render_finding_workspace(st: Any, result: ScanResult | None) -> None:
                     evidence_note=evidence_note,
                     actor="manual",
                 )
+                workspace = st.session_state.get("workspace")
+                if isinstance(workspace, Workspace):
+                    persist_validation_update(
+                        workspace,
+                        finding_id=finding.id,
+                        old_status=old_status,
+                        new_status=status,
+                        reviewer=reviewer,
+                        note=note,
+                        evidence_note=evidence_note,
+                    )
                 st.success("Validation status updated in current session.")
             except ValueError as exc:
                 st.error(str(exc))
@@ -545,17 +684,31 @@ def _render_copilot_chat(st: Any, result: ScanResult | None) -> None:
         messages.append({"role": "user", "content": prompt})
         answer = handle_copilot_chat_turn(prompt, scan_result=result, selected_finding=selected)
         messages.append({"role": "assistant", "content": answer})
+        workspace = st.session_state.get("workspace")
+        if isinstance(workspace, Workspace):
+            persist_chat_turn(workspace, user_message=prompt, assistant_message=answer)
         st.rerun()
 
 
 def _render_copilot_workspace(st: Any) -> None:
     st.set_page_config(page_title="AI Security Analyst Copilot", layout="wide")
+    workspace = initialize_workspace_state(st.session_state)
     navigation = build_sidebar_navigation_state(st.session_state.get("nav_active", "Source Code Analysis"))
     with st.sidebar:
         st.title("AI Security Analyst")
         nav = st.radio("Workspace", navigation["items"], index=navigation["items"].index(navigation["active"]))
         st.session_state["nav_active"] = nav
         st.caption("Local-first copilot workspace")
+        st.caption(f"Workspace: {workspace.workspace_id}")
+        try:
+            scan_repository = _scan_repo()
+            scan_rows = load_saved_scans_for_sidebar(scan_repository)
+        except OSError:
+            scan_rows = []
+        if scan_rows:
+            selected_scan = st.selectbox("Saved scans", [row["id"] for row in scan_rows])
+            if st.button("Load selected scan"):
+                select_scan_for_workspace(st.session_state, scan_repository, workspace, selected_scan)
 
     result = st.session_state.get("last_scan_result")
     st.title("AI Security Analyst Copilot")

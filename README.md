@@ -142,6 +142,8 @@ The primary UI is a local-first Copilot workspace with sidebar navigation, chat,
 
 See `docs/copilot-ui-workspace.md` for the UI workflow.
 
+Workspace state, chat history, selected scans, and validation activity are stored locally with redaction and size limits. See `docs/copilot-workspace-persistence.md`.
+
 ## Docker Usage
 
 ```bash
