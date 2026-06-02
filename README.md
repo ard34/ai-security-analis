@@ -132,7 +132,7 @@ Dashboard UI dependencies are optional. Install them only when you need to run S
 python -m pip install -r requirements-ui.txt
 ```
 
-On Python 3.15, `requirements-ui.txt` intentionally skips the Streamlit dependency stack because packages such as pyarrow, pandas, and pillow may not have stable wheels yet. Core CLI/testing still installs and runs normally. To run the Streamlit UI, use a Python version supported by the Streamlit dependency stack, then install `requirements-ui.txt`.
+On Python 3.14/3.15, `requirements-ui.txt` intentionally skips the Streamlit dependency stack because packages such as pyarrow, pandas, and pillow may not have stable wheels yet. Core CLI/testing still installs and runs normally. To run the Streamlit UI, use Python 3.11-3.13 or another version supported by the Streamlit dependency stack, then install `requirements-ui.txt`.
 
 ```bash
 streamlit run app/dashboard.py
@@ -160,7 +160,7 @@ Reports can be exported as JSON, HTML, or PDF. HTML output escapes user-controll
 
 ## Python 3.15 Compatibility
 
-Core mode is designed to run on Python 3.15 without installing Streamlit, pyarrow, pandas, numpy, or other dashboard dependencies that may not yet publish stable wheels. Use `requirements-core.txt` for CLI/report/storage/pipeline/safety workflows and `requirements-dev.txt` for pytest and ruff. `requirements-ui.txt` uses Python version markers so Python 3.15 installs do not try to build unsupported UI dependencies from source.
+Core mode is designed to run on Python 3.14/3.15 without installing Streamlit, pyarrow, pandas, numpy, or other dashboard dependencies that may not yet publish stable wheels. Use `requirements-core.txt` for CLI/report/storage/pipeline/safety workflows and `requirements-dev.txt` for pytest and ruff. `requirements-ui.txt` uses Python version markers so bleeding-edge Python installs do not try to build unsupported UI dependencies from source.
 
 ## Known Limitations
 
