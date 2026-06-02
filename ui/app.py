@@ -170,6 +170,36 @@ def build_safety_status_banner(
     }
 
 
+def build_no_scan_selected_message() -> str:
+    return "No scan is selected. Run Source Code Analysis or load a saved scan from the sidebar."
+
+
+def build_no_finding_selected_message() -> str:
+    return "No finding is selected. Select a validation-ready finding to review source and validation details."
+
+
+def build_export_unavailable_reason(last_scan_result: ScanResult | None) -> str:
+    if can_export_from_ui(last_scan_result):
+        return ""
+    return "Export is unavailable until a scan result is loaded."
+
+
+def build_manual_confirmation_warning() -> str:
+    return "Only mark as manually_confirmed after authorized manual validation with evidence."
+
+
+def build_streamlit_missing_message() -> str:
+    return "Streamlit is optional. Install UI dependencies with: python -m pip install -r requirements-ui.txt"
+
+
+def build_source_analysis_disabled_reason(source_path: str) -> str:
+    if source_path.strip():
+        if Path(source_path).expanduser().exists():
+            return ""
+        return "Source analysis is disabled because the local path does not exist."
+    return "Source analysis is disabled until a local source path is provided."
+
+
 def initialize_workspace_state(
     session_state: dict[str, Any],
     *,
@@ -603,6 +633,8 @@ def _render_scan_result(st: Any, result: ScanResult) -> None:
 def _render_export_buttons(st: Any, result: ScanResult | None) -> None:
     exports = dashboard_result_exports(result)
     disabled = not exports
+    if disabled:
+        st.info(build_export_unavailable_reason(result))
     st.download_button("Export JSON", data=exports.get("json", ""), file_name="scan-result.json", disabled=disabled)
     st.download_button("Export HTML", data=exports.get("html", ""), file_name="scan-result.html", disabled=disabled)
     st.download_button(
@@ -617,7 +649,10 @@ def _render_export_buttons(st: Any, result: ScanResult | None) -> None:
 def _render_type1(st: Any) -> None:
     source_path = st.text_input("Local folder path")
     logic_analysis = st.checkbox("Enable logic analysis", value=True)
-    if st.button("Run Source Analysis") and source_path:
+    disabled_reason = build_source_analysis_disabled_reason(source_path)
+    if disabled_reason:
+        st.info(disabled_reason)
+    if st.button("Run Source Analysis", disabled=bool(disabled_reason)) and source_path:
         st.session_state["last_scan_result"] = run_source_logic_analysis_from_ui(
             source_path, logic_analysis=logic_analysis
         )
@@ -631,7 +666,7 @@ def _render_finding_workspace(st: Any, result: ScanResult | None) -> None:
     rows = findings_to_workspace_rows(result)
     st.subheader("Findings")
     if not rows:
-        st.info("No findings loaded.")
+        st.info(build_no_finding_selected_message())
         return
     labels = [f"{row['index']}: {row['severity']} - {row['title']}" for row in rows]
     selected_label = st.selectbox("Selected finding", labels)
@@ -639,7 +674,7 @@ def _render_finding_workspace(st: Any, result: ScanResult | None) -> None:
     finding = get_selected_finding(result, selected_index)
     st.session_state["selected_finding_index"] = selected_index
     st.json(build_finding_detail_view_model(finding))
-    st.warning("Only mark as manually_confirmed after authorized manual validation with evidence.")
+    st.warning(build_manual_confirmation_warning())
     if finding:
         status = st.selectbox("Validation status", build_validation_status_options(), index=0)
         reviewer = st.text_input("Reviewer/operator")
@@ -725,7 +760,9 @@ def _render_copilot_workspace(st: Any) -> None:
     with left:
         st.caption(summarize_scan_for_copilot(result))
         _render_copilot_chat(st, result)
-        if result:
+        if not result:
+            st.info(build_no_scan_selected_message())
+        else:
             st.subheader("Scan Result")
             st.json(sanitize_dashboard_display_data(result.to_dict()))
     with right:
@@ -837,6 +874,7 @@ def render_streamlit() -> None:
     try:
         import streamlit as st
     except ImportError:
+        print(build_streamlit_missing_message())
         return
 
     _render_copilot_workspace(st)
