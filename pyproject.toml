@@ -27,6 +27,9 @@ exclude = [
 select = ["E", "F", "I", "B", "UP"]
 ignore = []
 
+[tool.ruff.lint.per-file-ignores]
+"ui/app.py" = ["E402"]
+
 [tool.mypy]
 python_version = "3.11"
 ignore_missing_imports = true

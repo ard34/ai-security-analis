@@ -1,4 +1,7 @@
 -r requirements-core.txt
 
-streamlit>=1.30
-reportlab>=4.0
+# Streamlit currently pulls pyarrow/pandas wheels that may not be available on
+# bleeding-edge Python releases. Keep Python 3.15 core mode installable by
+# skipping the optional UI stack there.
+streamlit>=1.30; python_version < "3.15"
+reportlab>=4.0; python_version < "3.15"

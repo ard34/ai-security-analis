@@ -22,7 +22,7 @@ git status --short
 python -m pip install -r requirements-ui.txt
 ```
 
-Python 3.15 core mode does not require Streamlit. UI mode requires the optional dependency install above. If UI install fails on a bleeding-edge Python version, use a supported Python version for UI testing or continue core CLI/testing mode only.
+Python 3.15 core mode does not require Streamlit. `requirements-ui.txt` skips the optional Streamlit stack on Python 3.15 to avoid source builds for packages such as pyarrow, pandas, and pillow. UI mode requires a Python version supported by the Streamlit dependency stack; core CLI/testing mode remains available without UI dependencies.
 
 ## 3. Start Command
 
