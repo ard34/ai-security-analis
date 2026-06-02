@@ -134,10 +134,13 @@ python -m pip install -r requirements-ui.txt
 
 ```bash
 streamlit run app/dashboard.py
+streamlit run ui/app.py
 make run-dashboard
 ```
 
-The dashboard has a mode selector for Type 1 and Type 2 workflows. Type 2 includes an Assessment Workflow section for creating draft assessments, reviewing scope and authorization notes, approving authorized work, and archiving assessments. The dashboard does not bypass approval, scope validation, safe execution, confirmation, audit log, timeout, rate limit, or scan budget gates.
+The primary UI is a local-first Copilot workspace with sidebar navigation, chat, source analysis, finding detail, manual validation status, evidence, and report export. Type 2 includes an Assessment Workflow section for creating draft assessments, reviewing scope and authorization notes, approving authorized work, and archiving assessments. The UI does not bypass approval, scope validation, safe execution, confirmation, audit log, timeout, rate limit, or scan budget gates.
+
+See `docs/copilot-ui-workspace.md` for the UI workflow.
 
 ## Docker Usage
 

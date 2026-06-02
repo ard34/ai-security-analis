@@ -8,14 +8,25 @@ from typing import Any
 
 from core.assessment import Assessment
 from core.finding_dedup import deduplicate_findings
+from core.finding_validation import (
+    build_validation_status_options,
+    update_finding_validation_status,
+)
+from core.finding_validation import (
+    can_mark_finding_manually_confirmed as core_can_mark_finding_manually_confirmed,
+)
+from core.finding_validation import (
+    sanitize_validation_note as core_sanitize_validation_note,
+)
 from core.logging import read_audit_log
-from core.models import ScanResult
+from core.models import Finding, ScanResult
 from core.pipeline_domain import run_domain_assessment
 from core.pipeline_source import run_source_assessment
 from core.policies import DomainRunPolicy, redact_value
 from core.scope import ScopeError
 from reporting.html_report import render_html_report
 from reporting.pdf_report import render_pdf_report
+from ui.chat import handle_copilot_chat_turn, summarize_scan_for_copilot
 
 TYPE1_MODE = "Type 1 — Source Folder Assessment"
 TYPE2_MODE = "Type 2 — Domain Safe-Live Assessment"
@@ -23,6 +34,131 @@ TYPE2_MODE = "Type 2 — Domain Safe-Live Assessment"
 
 def mode_options() -> list[str]:
     return [TYPE1_MODE, TYPE2_MODE]
+
+
+def build_sidebar_navigation_state(selected: str = "Source Code Analysis") -> dict[str, object]:
+    items = [
+        "New Assessment",
+        "Assessment Projects",
+        "Source Code Analysis",
+        "Domain Safe-Live",
+        "Scan History",
+        "Reports",
+        "Settings/Safety",
+    ]
+    active = selected if selected in items else "Source Code Analysis"
+    return {"items": items, "active": active}
+
+
+def build_source_analysis_form_state(source_path: str, *, logic_analysis: bool = False) -> dict[str, object]:
+    path = source_path.strip()
+    return {
+        "source_path": path,
+        "logic_analysis": bool(logic_analysis),
+        "local_only": True,
+        "can_run": can_run_source_logic_analysis_from_ui(path),
+    }
+
+
+def can_run_source_logic_analysis_from_ui(source_path: str) -> bool:
+    return bool(source_path.strip() and Path(source_path).expanduser().exists())
+
+
+def run_source_logic_analysis_from_ui(source_path: str, *, logic_analysis: bool = True) -> ScanResult:
+    if not can_run_source_logic_analysis_from_ui(source_path):
+        raise ValueError("source path is required and must exist")
+    return run_source_assessment(source_path, logic_analysis=logic_analysis)
+
+
+def findings_to_workspace_rows(result: ScanResult | None) -> list[dict[str, object]]:
+    if not result:
+        return []
+    return [
+        {
+            "index": index,
+            "title": finding.title,
+            "severity": finding.severity,
+            "validation_status": finding.validation_status,
+            "confidence_score": finding.confidence_score,
+            "source_locations": finding.source_locations,
+        }
+        for index, finding in enumerate(result.findings)
+    ]
+
+
+def get_selected_finding(result: ScanResult | None, selected_index: int | None = None) -> Finding | None:
+    if not result or not result.findings:
+        return None
+    index = selected_index if selected_index is not None else 0
+    if index < 0 or index >= len(result.findings):
+        return None
+    return result.findings[index]
+
+
+def can_mark_finding_manually_confirmed(*, reviewer: str, note: str, evidence_note: str) -> bool:
+    return core_can_mark_finding_manually_confirmed(reviewer=reviewer, note=note, evidence_note=evidence_note)
+
+
+def sanitize_validation_note(note: str) -> str:
+    return core_sanitize_validation_note(note)
+
+
+def build_finding_detail_view_model(finding: Finding | None) -> dict[str, object]:
+    if not finding:
+        return {"selected": False}
+    plan = finding.metadata.get("manual_validation_plan", {})
+    return sanitize_dashboard_display_data(
+        {
+            "selected": True,
+            "title": finding.title,
+            "severity": finding.severity,
+            "confidence_score": finding.confidence_score,
+            "validation_status": finding.validation_status,
+            "source_locations": finding.source_locations,
+            "affected_routes": finding.affected_routes,
+            "affected_functions": finding.affected_functions,
+            "vulnerable_flow": finding.vulnerable_flow,
+            "root_cause": finding.root_cause,
+            "missing_control": finding.missing_control,
+            "attacker_model": finding.attacker_model,
+            "preconditions": finding.preconditions,
+            "exploitability_reasoning": finding.exploitability_reasoning,
+            "manual_validation_steps": finding.manual_validation_steps,
+            "expected_evidence": finding.expected_evidence,
+            "false_positive_checks": finding.false_positive_checks,
+            "remediation_guidance": finding.remediation_guidance,
+            "manual_validation_plan": plan,
+        }
+    )
+
+
+def can_export_from_ui(last_scan_result: ScanResult | None) -> bool:
+    return can_export_dashboard_result(last_scan_result)
+
+
+def build_safety_status_banner(
+    *,
+    mode: str = "Local-only",
+    assessment: Assessment | None = None,
+    target: str = "",
+    network_allowed: bool = False,
+    confirmed: bool = False,
+    kill_switch_enabled: bool = False,
+) -> dict[str, object]:
+    in_scope = False
+    if assessment and target.strip():
+        try:
+            in_scope = assessment.scope().contains(target)
+        except ScopeError:
+            in_scope = False
+    return {
+        "mode": mode,
+        "assessment_approved": bool(assessment and assessment.approved),
+        "target_in_scope": in_scope,
+        "network_allowed": network_allowed,
+        "confirmation": confirmed,
+        "kill_switch": "enabled" if kill_switch_enabled else "disabled",
+    }
 
 
 def can_enable_domain_mode(assessment: Assessment | None, confirmed: bool) -> bool:
@@ -353,12 +489,95 @@ def _render_export_buttons(st: Any, result: ScanResult | None) -> None:
 
 def _render_type1(st: Any) -> None:
     source_path = st.text_input("Local folder path")
-    if st.button("Run Source Assessment") and source_path:
-        st.session_state["last_scan_result"] = run_source_assessment(source_path)
+    logic_analysis = st.checkbox("Enable logic analysis", value=True)
+    if st.button("Run Source Analysis") and source_path:
+        st.session_state["last_scan_result"] = run_source_logic_analysis_from_ui(
+            source_path, logic_analysis=logic_analysis
+        )
     result = st.session_state.get("last_scan_result")
     if result:
         _render_scan_result(st, result)
     _render_export_buttons(st, result)
+
+
+def _render_finding_workspace(st: Any, result: ScanResult | None) -> None:
+    rows = findings_to_workspace_rows(result)
+    st.subheader("Findings")
+    if not rows:
+        st.info("No findings loaded.")
+        return
+    labels = [f"{row['index']}: {row['severity']} - {row['title']}" for row in rows]
+    selected_label = st.selectbox("Selected finding", labels)
+    selected_index = int(str(selected_label).split(":", 1)[0])
+    finding = get_selected_finding(result, selected_index)
+    st.session_state["selected_finding_index"] = selected_index
+    st.json(build_finding_detail_view_model(finding))
+    st.warning("Only mark as manually_confirmed after authorized manual validation with evidence.")
+    if finding:
+        status = st.selectbox("Validation status", build_validation_status_options(), index=0)
+        reviewer = st.text_input("Reviewer/operator")
+        note = st.text_area("Validation note")
+        evidence_note = st.text_area("Evidence note")
+        if st.button("Update validation status"):
+            try:
+                update_finding_validation_status(
+                    finding,
+                    status=status,
+                    reviewer=reviewer,
+                    note=note,
+                    evidence_note=evidence_note,
+                    actor="manual",
+                )
+                st.success("Validation status updated in current session.")
+            except ValueError as exc:
+                st.error(str(exc))
+
+
+def _render_copilot_chat(st: Any, result: ScanResult | None) -> None:
+    st.subheader("Copilot")
+    messages = st.session_state.setdefault("chat_messages", [])
+    for message in messages:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+    selected = get_selected_finding(result, st.session_state.get("selected_finding_index"))
+    prompt = st.chat_input("Ask about the current scan, finding, validation plan, or report export")
+    if prompt:
+        messages.append({"role": "user", "content": prompt})
+        answer = handle_copilot_chat_turn(prompt, scan_result=result, selected_finding=selected)
+        messages.append({"role": "assistant", "content": answer})
+        st.rerun()
+
+
+def _render_copilot_workspace(st: Any) -> None:
+    st.set_page_config(page_title="AI Security Analyst Copilot", layout="wide")
+    navigation = build_sidebar_navigation_state(st.session_state.get("nav_active", "Source Code Analysis"))
+    with st.sidebar:
+        st.title("AI Security Analyst")
+        nav = st.radio("Workspace", navigation["items"], index=navigation["items"].index(navigation["active"]))
+        st.session_state["nav_active"] = nav
+        st.caption("Local-first copilot workspace")
+
+    result = st.session_state.get("last_scan_result")
+    st.title("AI Security Analyst Copilot")
+    st.json(build_safety_status_banner(mode="Local-only"))
+
+    if st.session_state.get("nav_active") == "Domain Safe-Live":
+        _render_type2(st)
+        return
+    if st.session_state.get("nav_active") == "Source Code Analysis":
+        with st.expander("Run Source Code Analysis", expanded=not result):
+            _render_type1(st)
+
+    left, right = st.columns([2, 1])
+    with left:
+        st.caption(summarize_scan_for_copilot(result))
+        _render_copilot_chat(st, result)
+        if result:
+            st.subheader("Scan Result")
+            st.json(sanitize_dashboard_display_data(result.to_dict()))
+    with right:
+        _render_finding_workspace(st, result)
+        _render_export_buttons(st, result)
 
 
 def _render_assessment_workflow(st: Any) -> Assessment | None:
@@ -467,12 +686,7 @@ def render_streamlit() -> None:
     except ImportError:
         return
 
-    st.title("AI Security Analyst")
-    mode = st.selectbox("Mode", mode_options())
-    if mode == TYPE1_MODE:
-        _render_type1(st)
-    else:
-        _render_type2(st)
+    _render_copilot_workspace(st)
 
 
 if __name__ == "__main__":
